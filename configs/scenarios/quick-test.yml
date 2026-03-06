@@ -1,0 +1,48 @@
+# CoW Performance Testing Suite Scenario
+# Quick Test: Ultra-fast validation test for rapid iteration
+
+# Test configuration
+default_trader_count: 2
+default_duration: 30  # 30 seconds
+
+# Network settings
+network:
+  chain_id: 1
+  rpc_url: "http://localhost:8545"
+
+# Wallet funding (required for real orderbook testing)
+wallet:
+  funding_enabled: true
+  eth_balance: 10.0
+  token_balances:
+    WETH: 10.0
+    DAI: 10000.0
+    USDC: 10000.0
+    USDT: 10000.0
+
+# Trading pattern: Constant rate (simple and predictable)
+trading_pattern: "constant_rate"
+base_rate: 20.0  # 20 orders per minute (~0.33 orders/sec per trader)
+
+# Order type distribution (market only for quick test)
+market_order_ratio: 1.0
+limit_order_ratio: 0.0
+twap_order_ratio: 0.0
+stop_loss_order_ratio: 0.0
+good_after_time_order_ratio: 0.0
+
+# Order amount configuration (optimized for baseline solver)
+# Small amounts for fast execution with minimal slippage
+min_order_amount: 0.1
+max_order_amount: 1.0
+
+# No rate limiting needed for quick test
+enable_global_rate_limit: false
+enable_per_trader_rate_limit: false
+
+# Use case: Rapid development validation
+# - Quick smoke tests (~30 seconds)
+# - Fast iteration during development
+# - CI/CD pre-merge validation
+# - Order filling verification
+# - Expected: ~10 orders total (2 traders × 20/min × 0.5 min)

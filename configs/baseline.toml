@@ -1,0 +1,28 @@
+# CoW Protocol Baseline Solver Configuration
+# The baseline solver is a simple AMM-based solver that uses Uniswap V2 pools
+
+# Chain ID (1 for Ethereum mainnet)
+chain-id = "1"
+
+# Base tokens used for routing (Ethereum mainnet addresses)
+# The solver will attempt to route trades through these tokens
+base-tokens = [
+    "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",  # WETH (Wrapped ETH)
+    "0x6B175474E89094C44Da98b954EedeAC495271d0F",  # DAI
+    "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",  # USDC
+    "0xdAC17F958D2ee523a2206206994597C13D831ec7",  # USDT
+    "0x6810e776880C02933D47DB1b9fc05908e5386b96",  # GNO
+]
+
+# Maximum number of hops in a multi-hop swap
+# Example: With max-hops = 2, can do Token A -> WETH -> USDC
+max-hops = 2
+
+# Maximum number of attempts for partially fillable orders
+# The solver will try up to this many combinations for partial fills
+max-partial-attempts = 5
+
+# Amount of native token (ETH) to use for price estimation
+# This value is used when estimating gas costs and token prices
+# 0.1 ETH = 100000000000000000 wei
+native-token-price-estimation-amount = "100000000000000000"

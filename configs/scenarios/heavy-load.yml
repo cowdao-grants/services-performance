@@ -1,0 +1,47 @@
+# CoW Performance Testing Suite Scenario
+# Heavy Load: High-intensity stress test pushing system limits
+
+# Test configuration
+default_trader_count: 25
+default_duration: 600  # 10 minutes
+
+# Network settings
+network:
+  chain_id: 1
+  rpc_url: "http://localhost:8545"
+
+# Wallet funding (required for real orderbook testing)
+wallet:
+  funding_enabled: true
+  eth_balance: 10.0
+  token_balances:
+    WETH: 5.0
+    DAI: 5000.0
+
+# Trading pattern: Constant rate (predictable, sustained load)
+trading_pattern: "constant_rate"
+base_rate: 120.0  # 120 orders per minute (2 orders/sec per trader)
+
+# Order type distribution (mostly simple orders for high throughput)
+market_order_ratio: 0.6
+limit_order_ratio: 0.4
+twap_order_ratio: 0.0
+stop_loss_order_ratio: 0.0
+good_after_time_order_ratio: 0.0
+
+# Aggressive rate limiting to prevent overload
+enable_global_rate_limit: true
+max_orders_global_per_second: 40.0  # Cap at 40 orders/sec
+rate_limit_burst_allowance: 1.2     # Small burst allowance
+
+enable_per_trader_rate_limit: true
+max_orders_per_trader_per_second: 2.5  # Cap per trader
+
+# Use case: Stress testing and capacity planning
+# - Find system breaking points
+# - Test under peak traffic (Black Friday, major launches)
+# - Validate rate limiting under pressure
+# - Database and API performance under load
+# - Resource utilization monitoring
+# - Expected: ~40 orders/sec sustained (rate limited)
+# - Without limits: ~50 orders/sec (25 traders × 2 orders/sec)

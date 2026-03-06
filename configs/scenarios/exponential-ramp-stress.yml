@@ -1,0 +1,52 @@
+# CoW Performance Testing Suite Scenario
+# Exponential Ramp Stress: Rapidly increase load to find breaking points
+
+# Test configuration
+default_trader_count: 10
+default_duration: 180  # 3 minutes
+
+# Network settings
+network:
+  chain_id: 1
+  rpc_url: "http://localhost:8545"
+
+# Wallet funding (required for real orderbook testing)
+wallet:
+  funding_enabled: true
+  eth_balance: 10.0
+  token_balances:
+    WETH: 5.0
+    DAI: 5000.0
+
+# Trading pattern: RAMP_UP with exponential curve
+trading_pattern: "ramp_up"
+base_rate: 60.0
+
+# Exponential ramp configuration: Aggressive load increase
+ramp_start_rate: 1.0       # Start very low (1 order/min)
+ramp_target_rate: 120.0    # End very high (120 orders/min)
+ramp_duration: 150.0       # Ramp over 2.5 minutes
+ramp_curve: "exponential"  # Exponential = slow start, rapid finish
+
+# Order type distribution (mostly market for speed)
+market_order_ratio: 0.8
+limit_order_ratio: 0.2
+twap_order_ratio: 0.0
+stop_loss_order_ratio: 0.0
+good_after_time_order_ratio: 0.0
+
+# No rate limiting - find the breaking point
+enable_global_rate_limit: false
+enable_per_trader_rate_limit: false
+
+# Use case: Finding system limits quickly
+# - Exponential ramp reveals breaking points faster than linear
+# - Starts gentle (allows warmup)
+# - Ends aggressive (pushes to limits)
+# - Good for capacity planning
+# - Identifies performance degradation threshold
+#
+# Exponential curve behavior:
+# - First 50% of time: Slow increase (1 → 11 orders/min)
+# - Next 25% of time: Medium increase (11 → 35 orders/min)
+# - Final 25% of time: Rapid increase (35 → 120 orders/min)

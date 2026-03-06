@@ -1,0 +1,51 @@
+# CoW Performance Testing Suite Scenario
+# Spike Stress Test: Simulate sudden traffic spikes like major market events
+
+# Test configuration
+default_trader_count: 10
+default_duration: 180  # 3 minutes
+
+# Network settings
+network:
+  chain_id: 1
+  rpc_url: "http://localhost:8545"
+
+# Wallet funding (required for real orderbook testing)
+wallet:
+  funding_enabled: true
+  eth_balance: 10.0
+  token_balances:
+    WETH: 5.0
+    DAI: 5000.0
+
+# Trading pattern: SPIKE
+trading_pattern: "spike"
+base_rate: 60.0
+
+# Spike configuration: Sudden bursts with recovery
+spike_normal_rate: 10.0     # Normal rate: 10 orders/min (calm market)
+spike_burst_rate: 100.0     # Spike rate: 100 orders/min (10x burst!)
+spike_duration: 15.0        # Each spike lasts 15 seconds
+spike_recovery_time: 45.0   # 45 seconds between spikes
+
+# Order type distribution (more market orders simulates urgency)
+market_order_ratio: 0.7
+limit_order_ratio: 0.3
+twap_order_ratio: 0.0
+stop_loss_order_ratio: 0.0
+good_after_time_order_ratio: 0.0
+
+# Rate limiting (recommended to prevent API overload)
+enable_global_rate_limit: true
+max_orders_global_per_second: 20.0  # Cap at 20 orders/sec globally
+rate_limit_burst_allowance: 2.0     # Allow 2x burst
+
+enable_per_trader_rate_limit: true
+max_orders_per_trader_per_second: 3.0  # Prevent single trader flooding
+
+# Use case: Test burst capacity and recovery
+# - Simulates major market events (protocol launches, liquidations)
+# - Tests queue handling and backpressure
+# - Validates rate limiting effectiveness
+# - Ensures system recovers between spikes
+# - Pattern: calm → spike → calm → spike (repeating)

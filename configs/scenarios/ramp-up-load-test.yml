@@ -1,0 +1,41 @@
+# CoW Performance Testing Suite Scenario
+# Ramp-Up Load Test: Gradually increase load to test system scaling behavior
+
+# Test configuration
+default_trader_count: 5
+default_duration: 300  # 5 minutes
+
+# Network settings
+network:
+  chain_id: 1
+  rpc_url: "http://localhost:8545"
+
+# Wallet funding (required for real orderbook testing)
+wallet:
+  funding_enabled: true
+  eth_balance: 10.0
+  token_balances:
+    WETH: 5.0
+    DAI: 5000.0
+
+# Trading pattern: RAMP_UP
+trading_pattern: "ramp_up"
+base_rate: 60.0
+
+# Ramp-up configuration: Start low, end high
+ramp_start_rate: 6.0      # Start at 6 orders/min (low load)
+ramp_target_rate: 60.0    # Ramp up to 60 orders/min (high load)
+ramp_duration: 240.0      # Ramp over 4 minutes
+ramp_curve: "linear"      # Linear increase
+
+# Order type distribution
+market_order_ratio: 0.6
+limit_order_ratio: 0.4
+twap_order_ratio: 0.0
+stop_loss_order_ratio: 0.0
+good_after_time_order_ratio: 0.0
+
+# Use case: Test how orderbook handles gradually increasing load
+# - Identify breaking points
+# - Measure latency degradation
+# - Test auto-scaling behavior

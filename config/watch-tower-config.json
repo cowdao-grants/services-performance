@@ -1,0 +1,13 @@
+{
+  "networks": [
+    {
+      "name": "mainnet",
+      "rpc": "http://chain:8545",
+      "deploymentBlock": 12594000,
+      "orderBookApi": "http://orderbook:80",
+      "filterPolicy": {
+        "defaultAction": "ACCEPT"
+      }
+    }
+  ]
+}
