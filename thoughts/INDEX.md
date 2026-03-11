@@ -125,6 +125,7 @@ Detailed implementation approaches for tickets. Read these before implementing t
 | [2026-02-03-cow-589-comparison-engine.md](plans/2026-02-03-cow-589-comparison-engine.md) | COW-589 | ✅ Complete | ComparisonEngine, regression, statistics, p-value, Cohen's-d |
 | [2026-02-03-cow-590-automated-reporting.md](plans/2026-02-03-cow-590-automated-reporting.md) | COW-590 | ✅ Complete | ReportGenerator, formatters, CSV, recommendations, CLI |
 | [2026-02-13-cow-598-alerting-rules.md](plans/2026-02-13-cow-598-alerting-rules.md) | COW-598 | 🔲 Ready | Prometheus alerts, alerting rules, thresholds, Grafana annotations |
+| [m4-issue-14-predefined-scenarios-plan.md](plans/m4-issue-14-predefined-scenarios-plan.md) | M4-Issue-14 | 👀 In Review | scenarios, tags, metadata, success-criteria, CI/CD, documentation |
 
 ---
 

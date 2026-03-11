@@ -1,0 +1,46 @@
+# Large Orders Scenario
+# Purpose: Test handling of very large order amounts (whale traders)
+
+name: large-orders
+description: Test system with very large order amounts (100+ ETH equivalent)
+version: "1.0"
+
+tags:
+  - edge-case
+  - large-orders
+  - whale
+  - short
+
+metadata:
+  expected_orders: 150
+  expected_duration_seconds: 300
+  resources:
+    min_memory_gb: 2.0
+    min_cpu_cores: 2
+    recommended_memory_gb: 4.0
+    recommended_cpu_cores: 4
+
+success_criteria:
+  min_success_rate: 0.85  # Lower due to liquidity constraints
+  max_p95_latency_seconds: 20.0  # Higher due to complex routing
+  max_error_rate: 0.15
+  min_throughput_per_second: 0.4
+
+# Test configuration
+num_traders: 10
+duration: 300  # 5 minutes
+startup_interval: 0.2
+
+# Order type distribution - mostly market orders for large trades
+market_order_ratio: 0.8
+limit_order_ratio: 0.2
+twap_order_ratio: 0.0
+stop_loss_order_ratio: 0.0
+good_after_time_order_ratio: 0.0
+
+# Trading pattern - slower rate for large orders
+trading_pattern: constant_rate
+base_rate: 30.0  # 0.5 orders/second total (10 traders * 0.05 orders/sec each)
+
+# Note: Order amounts would be configured separately in the test runner
+# Expected range: 100-500 ETH equivalent per order

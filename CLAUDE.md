@@ -62,3 +62,20 @@ docker compose logs -f     # View logs
 - All async operations should use `asyncio` with proper concurrency patterns
 - Type hints are required on all functions
 - Google-style docstrings for documentation
+
+## README.md Organization
+
+The root README.md must follow a **chronological user journey** structure, prioritizing actionable content:
+
+1. **Quick Start** - Installation, requirements, environment setup, and first test run
+2. **Running Tests** - How to run performance tests, available scenarios (brief overview)
+3. **Viewing Results** - Reports, baselines, comparison, regression detection
+4. **Monitoring** - Prometheus, Grafana, dashboards (optional/advanced)
+5. **Advanced Topics** - Detailed scenario management, custom scenarios, disk management
+6. **Reference** - Documentation links, project structure, contributing, roadmap
+
+**Key principles:**
+- Early sections are action-oriented ("how to do X"), not reference material
+- Detailed reference information belongs in later "Advanced" sections
+- Users should be able to get started quickly without scrolling past extensive details
+- Follow the natural workflow: install → run → view results → advanced usage

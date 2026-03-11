@@ -184,12 +184,31 @@ def scenarios(
         None, "--create-template", help="Create a scenario template file"
     ),
     scenarios_dir: Optional[str] = typer.Option(None, "--dir", "-d", help="Scenarios directory"),
+    tag: Optional[list[str]] = typer.Option(
+        None, "--tag", "-t", help="Filter by tag (can specify multiple, must match all)"
+    ),
+    search: Optional[str] = typer.Option(
+        None, "--search", "-s", help="Search by name or description"
+    ),
+    simple: bool = typer.Option(False, "--simple", help="Show simple view without metadata"),
 ) -> None:
     """Manage performance test scenarios.
 
     Examples:
         # List available scenarios
         cow-perf scenarios
+
+        # Filter by tag
+        cow-perf scenarios --tag regression --tag short
+
+        # Search by name or description
+        cow-perf scenarios --search "stress"
+
+        # Combine filters
+        cow-perf scenarios --tag edge-case --search "large"
+
+        # Simple view without metadata
+        cow-perf scenarios --simple
 
         # Validate a scenario file
         cow-perf scenarios --validate my-scenario.yml
@@ -224,7 +243,12 @@ def scenarios(
 
     # List scenarios (default)
     dir_path = Path(scenarios_dir) if scenarios_dir else None
-    list_scenarios_command(dir_path)
+    list_scenarios_command(
+        scenarios_dir=dir_path,
+        tags=tag if tag else None,
+        search=search,
+        show_metadata=not simple,
+    )
 
 
 @app.command()

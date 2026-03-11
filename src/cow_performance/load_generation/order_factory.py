@@ -53,7 +53,7 @@ class OrderFactory:
             chain_id: Chain ID (1 for mainnet, etc.)
             settlement_contract: Address of CoW Protocol settlement contract
             amount_range: Min and max amounts in token units (default: 0.1 to 10.0)
-            valid_duration: Order validity duration in seconds (default: 600 = 10 minutes)
+            valid_duration: Order validity duration in seconds (default: 120 = 2 minutes)
             default_app_data: Default appData hash (default: zero hash)
             fee_percentage: Fee as percentage of sell amount (default: 0.1%)
             api_client: Optional API client for getting quotes (enables realistic pricing)
@@ -254,7 +254,7 @@ class OrderFactory:
             fee_amount_wei = 0  # Use zero fee in dry-run mode
 
         # Market orders have shorter expiration (2 minutes) for immediate execution
-        market_valid_to = int(time.time()) + 120  # 120 seconds = 2 minutes
+        market_valid_to = int(time.time()) + self.valid_duration
 
         # Create order parameters with market orderClass metadata
         params = OrderParameters(

@@ -1,0 +1,42 @@
+# Quick Validation Test
+# Purpose: Fast 30-second test to validate end-to-end functionality
+
+name: quick-validation
+description: Quick 30-second validation test for end-to-end functionality
+version: "1.0"
+
+tags:
+  - test
+  - quick
+  - validation
+
+metadata:
+  expected_orders: 75
+  expected_duration_seconds: 30
+  resources:
+    min_memory_gb: 1.0
+    min_cpu_cores: 1
+    recommended_memory_gb: 2.0
+    recommended_cpu_cores: 2
+
+success_criteria:
+  min_success_rate: 0.70  # Lower threshold for quick test
+  max_p95_latency_seconds: 30.0
+  max_error_rate: 0.30
+  min_throughput_per_second: 1.5
+
+# Test configuration
+num_traders: 5
+duration: 30  # 30 seconds
+startup_interval: 0.1
+
+# Order type distribution - simple mix
+market_order_ratio: 0.7
+limit_order_ratio: 0.3
+twap_order_ratio: 0.0
+stop_loss_order_ratio: 0.0
+good_after_time_order_ratio: 0.0
+
+# Trading pattern - constant rate
+trading_pattern: constant_rate
+base_rate: 150.0  # 2.5 orders/second total (5 traders * 0.5 orders/sec each)
