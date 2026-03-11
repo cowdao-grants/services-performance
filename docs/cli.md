@@ -194,6 +194,71 @@ cow-perf scenarios --create-template my-scenario.yml
 cow-perf scenarios --create-template ~/.cow-perf/scenarios/custom-load.yml
 ```
 
+### Interactive Configuration Wizard
+
+The `cow-perf config-init` command provides an interactive wizard to create scenario configurations. This is recommended for new users or when you want guided configuration creation.
+
+**Basic usage:**
+```bash
+# Interactive mode - choose your approach
+cow-perf config-init
+
+# Specify output file
+cow-perf config-init --output my-test.yml
+
+# Quick start mode (minimal questions)
+cow-perf config-init --mode quick --output quick-test.yml
+
+# Template mode (expand from built-in template)
+cow-perf config-init --mode template --output spike-test.yml
+
+# Copy existing mode (customize predefined scenario)
+cow-perf config-init --mode existing --output custom-test.yml
+
+# Advanced mode (full configuration wizard)
+cow-perf config-init --mode advanced --output production-test.yml
+```
+
+**Available modes:**
+
+| Mode | Description | Best For |
+|------|-------------|----------|
+| `interactive` | Let the wizard guide you (default) | First-time users |
+| `quick` | Answer a few basic questions | Simple load tests |
+| `template` | Select and customize a built-in template | Common test patterns |
+| `existing` | Copy and modify a predefined scenario | Customizing known scenarios |
+| `advanced` | Full configuration with all options | Production testing |
+
+**Features:**
+- Validates configuration before saving
+- Shows helpful prompts with defaults
+- Displays next steps after generation
+- Supports all scenario features (success criteria, metadata, etc.)
+
+**Example quick start session:**
+```
+$ cow-perf config-init --mode quick
+
+⚡ Quick Start Mode
+Answer a few questions to create a basic load test.
+
+Scenario name [Scenario]: Load Test
+Description (optional) [Performance test: Load Test]: Testing 10 traders
+Number of concurrent traders [10]: 10
+Test duration (seconds) [60]: 120
+Target orders per minute (per trader) [60.0]: 30.0
+
+Validating configuration...
+✓ Configuration is valid
+
+✓ Configuration saved: scenario.yml
+
+Next Steps:
+  • Review: cat scenario.yml
+  • Validate: cow-perf scenarios --validate scenario.yml
+  • Run: cow-perf run --config scenario.yml
+```
+
 ### Scenario File Structure
 
 ```yaml

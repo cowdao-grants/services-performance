@@ -19,6 +19,7 @@ from .commands.run import run_command
 from .commands.scenarios import (
     create_scenario_template,
     list_scenarios_command,
+    list_templates_command,
     validate_scenario_command,
 )
 from .config import load_config, save_config_template
@@ -177,6 +178,9 @@ def run(
 @app.command()
 def scenarios(
     list_all: bool = typer.Option(True, "--list", "-l", help="List available scenarios"),
+    list_templates: bool = typer.Option(
+        False, "--list-templates", help="List available scenario templates"
+    ),
     validate: Optional[str] = typer.Option(
         None, "--validate", "-v", help="Validate a scenario file"
     ),
@@ -197,6 +201,9 @@ def scenarios(
     Examples:
         # List available scenarios
         cow-perf scenarios
+
+        # List available templates
+        cow-perf scenarios --list-templates
 
         # Filter by tag
         cow-perf scenarios --tag regression --tag short
@@ -219,6 +226,11 @@ def scenarios(
         # List scenarios from custom directory
         cow-perf scenarios --dir ./scenarios
     """
+    if list_templates:
+        # List available templates
+        list_templates_command()
+        return
+
     if create_template:
         # Create template file
         output_path = Path(create_template)
@@ -409,6 +421,64 @@ def config(
         sys.exit(3)
     except Exception as e:
         console.print(f"[bold red]Error:[/bold red] {e}")
+        sys.exit(1)
+
+
+@app.command(name="config-init")
+def config_init(
+    output: Optional[str] = typer.Option(
+        None, "--output", "-o", help="Output file path (default: scenario.yml)"
+    ),
+    mode: Optional[str] = typer.Option(
+        None,
+        "--mode",
+        "-m",
+        help="Generation mode: quick, template, existing, advanced (default: interactive)",
+    ),
+) -> None:
+    """Interactive wizard to create scenario configurations.
+
+    This command provides an interactive wizard to help you create
+    scenario YAML files without manually writing configuration.
+
+    Examples:
+        # Interactive mode (choose your approach)
+        cow-perf config-init
+
+        # Quick start mode (minimal questions)
+        cow-perf config-init --mode quick --output my-test.yml
+
+        # Template-based generation
+        cow-perf config-init --mode template
+
+        # Copy from existing scenario
+        cow-perf config-init --mode existing
+    """
+    from cow_performance.scenarios.generator import ConfigGenerator
+
+    # Determine output path
+    if output:
+        output_path = Path(output)
+    else:
+        output_path = Path("scenario.yml")
+
+    # Determine mode
+    generation_mode = mode or "interactive"
+
+    # Create generator and run
+    try:
+        generator = ConfigGenerator(console=console)
+        config = generator.generate(output_path, mode=generation_mode)
+
+        # Validate the generated config
+        generator.save_config(config, output_path)
+        generator.display_next_steps(output_path)
+
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Configuration generation cancelled.[/yellow]")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"\n[bold red]Error:[/bold red] {e}")
         sys.exit(1)
 
 
