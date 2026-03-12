@@ -590,17 +590,7 @@ cow-perf scenarios --tag regression --tag short
 
 ### Tip 3: Use Descriptive Names
 
-Good names help you find scenarios later:
-
-```yaml
-# Good
-name: "smoke-basic-5traders-2min"
-
-# Bad
-name: "test1"
-```
-
-Follow the pattern: `<type>-<characteristic>-<variant>`
+Follow the pattern `<type>-<characteristic>-<variant>` (e.g. `smoke-basic-5traders`). See [naming conventions](scenario-best-practices.md#scenario-naming-conventions) for full guidance.
 
 ---
 
@@ -679,50 +669,7 @@ cow-perf scenarios --dir my-scenarios/smoke
 
 ## Troubleshooting
 
-### Problem: "Order ratios sum to X, must equal 1.0"
-
-**Cause:** Order type ratios don't add up to exactly 1.0
-
-**Fix:** Ensure all 5 ratios sum to 1.0:
-```yaml
-market_order_ratio: 0.6
-limit_order_ratio: 0.4
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
-# Sum: 0.6 + 0.4 + 0.0 + 0.0 + 0.0 = 1.0 ✓
-```
-
----
-
-### Problem: "Trading pattern must be one of: constant_rate, burst, random_interval"
-
-**Cause:** Invalid trading pattern
-
-**Fix:** Use one of the three valid patterns:
-```yaml
-trading_pattern: "constant_rate"  # ✓ Valid
-# trading_pattern: "ramp_up"      # ✗ Invalid
-```
-
----
-
-### Problem: "Template not found"
-
-**Cause:** Template name is incorrect
-
-**Fix:** Check available templates:
-```bash
-cow-perf scenarios --list-templates
-```
-
-Use exact template name:
-```yaml
-template: ramp-up  # ✓ Correct
-# template: rampup  # ✗ Incorrect
-```
-
----
+For validation errors (order ratios, invalid trading patterns, missing fields) see [Best Practices: Troubleshooting](scenario-best-practices.md#troubleshooting).
 
 ### Problem: Configuration wizard gets stuck
 
