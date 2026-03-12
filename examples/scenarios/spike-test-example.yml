@@ -1,0 +1,14 @@
+# Example: Spike Stress Test
+# This example uses the spike template to create a stress test with a sudden
+# burst of load to test system resilience and recovery.
+
+template: spike
+parameters:
+  test_name: "Spike Test Example"
+  num_traders: 10
+  duration: 180  # 3 minutes total
+  normal_rate: 10.0  # Normal baseline: 10 orders/min per trader
+  spike_rate: 100.0  # Spike to 100 orders/min per trader
+  spike_start: 60  # Start spike after 60 seconds
+  spike_duration: 30  # Spike lasts 30 seconds
+  env: "example"

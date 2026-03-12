@@ -61,6 +61,8 @@ Comprehensive performance testing suite for the CoW Protocol Playground, enablin
 
 ## Running Performance Tests
 
+> **New to scenarios?** See the [Scenario User Guide](docs/scenario-user-guide.md) for a step-by-step tutorial on creating and using test scenarios.
+
 ### Available Test Scenarios
 
 The suite includes 5 production-ready scenarios with automated validation:
@@ -468,7 +470,147 @@ else:
         print(f"  - {failure.criterion}: {failure.message}")
 ```
 
-### Creating Custom Scenarios
+### Using Scenario Templates
+
+Templates provide a quick way to create scenarios for common test patterns without writing full YAML configurations. The suite includes built-in templates for the most common testing patterns.
+
+**List available templates:**
+```bash
+cow-perf scenarios --list-templates
+```
+
+**Built-in templates:**
+- **`ramp-up`** - Gradually increase load to find breaking points and test scaling behavior
+- **`spike`** - Sudden load burst to test resilience and recovery
+- **`sustained-load`** - Maintain constant load for extended periods to test stability
+
+**Create a scenario from a template:**
+
+```yaml
+# quick-load-test.yml
+template: ramp-up
+parameters:
+  test_name: "Quick Ramp-Up Test"
+  num_traders: 5
+  duration: 300  # 5 minutes
+  start_rate: 5.0  # Start at 5 orders/min per trader
+  target_rate: 50.0  # Ramp up to 50 orders/min per trader
+  ramp_curve: "linear"
+```
+
+Run the template-based scenario:
+```bash
+cow-perf run --config quick-load-test.yml
+```
+
+**Customize templates with additional settings:**
+
+You can override template defaults or add extra configuration:
+
+```yaml
+template: spike
+parameters:
+  test_name: "Custom Spike Test"
+  num_traders: 10
+  duration: 180
+  normal_rate: 10.0
+  spike_rate: 100.0
+
+# Override template defaults
+tags:
+  - custom
+  - high-priority
+
+# Custom order distribution
+twap_order_ratio: 0.2  # Enable TWAP orders
+
+# Custom success criteria
+success_criteria:
+  min_success_rate: 0.95
+  max_p95_latency_seconds: 10.0
+```
+
+**See template examples:**
+Check the `examples/scenarios/` directory for complete template usage examples.
+
+### Interactive Configuration Wizard
+
+> **📖 Full guide:** [Scenario User Guide](docs/scenario-user-guide.md) - Complete tutorial with examples and workflows
+
+The `cow-perf config-init` command provides an interactive wizard to create scenario configurations without manually writing YAML. This is the easiest way to create custom scenarios, especially for new users.
+
+**Quick start (interactive mode):**
+```bash
+# Let the wizard guide you through available options
+cow-perf config-init
+
+# Or specify output file
+cow-perf config-init --output my-test.yml
+```
+
+The wizard will present four creation approaches:
+1. **Quick start** - Answer a few basic questions for a simple test
+2. **From template** - Select and customize a built-in template
+3. **From existing** - Copy and modify a predefined scenario
+4. **Advanced** - Full configuration with success criteria and metadata
+
+**Mode shortcuts:**
+
+Skip the selection prompt by specifying a mode directly:
+
+```bash
+# Quick start: minimal questions
+cow-perf config-init --mode quick --output quick-test.yml
+
+# Template-based: expand from a template
+cow-perf config-init --mode template --output spike-test.yml
+
+# Copy existing: customize a predefined scenario
+cow-perf config-init --mode existing --output custom-test.yml
+
+# Advanced: full configuration wizard
+cow-perf config-init --mode advanced --output production-test.yml
+```
+
+**After generation:**
+
+The wizard automatically validates your configuration and shows next steps:
+```bash
+# Review the generated file
+cat my-test.yml
+
+# Validate the scenario
+cow-perf scenarios --validate my-test.yml
+
+# Run the test
+cow-perf run --config my-test.yml
+```
+
+**Example session:**
+```
+$ cow-perf config-init --mode quick
+
+⚡ Quick Start Mode
+Answer a few questions to create a basic load test.
+
+Scenario name: My First Load Test
+Description (optional): Testing order submission with 10 traders
+Number of concurrent traders [10]: 10
+Test duration (seconds) [60]: 120
+Target orders per minute (per trader) [60.0]: 30.0
+
+Validating configuration...
+✓ Configuration is valid
+
+✓ Configuration saved: scenario.yml
+
+Next Steps:
+  • Review: cat scenario.yml
+  • Validate: cow-perf scenarios --validate scenario.yml
+  • Run: cow-perf run --config scenario.yml
+```
+
+### Creating Custom Scenarios Manually
 
 Create your own scenario YAML file:
 
@@ -565,9 +707,16 @@ docker compose up -d
 
 | Topic | Document |
 |-------|----------|
+| **Getting Started** | |
+| Scenario User Guide | [docs/scenario-user-guide.md](docs/scenario-user-guide.md) ⭐ **Start here!** |
 | CLI Reference | [docs/cli.md](docs/cli.md) |
+| **Configuration** | |
+| Configuration Reference | [docs/configuration-reference.md](docs/configuration-reference.md) |
+| Scenario Best Practices | [docs/scenario-best-practices.md](docs/scenario-best-practices.md) |
+| **Development** | |
 | Development Guide | [docs/development.md](docs/development.md) |
 | Architecture | [docs/architecture.md](docs/architecture.md) |
+| **API Documentation** | |
 | Order Generation API | [docs/order-generation.md](docs/order-generation.md) |
 | Conditional Orders | [docs/conditional-orders.md](docs/conditional-orders.md) |
 | User Simulation | [docs/user-simulation.md](docs/user-simulation.md) |

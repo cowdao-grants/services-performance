@@ -166,3 +166,155 @@ class TestEndToEndWorkflow:
         # Baselines are now saved directly from test runs using
         # 'cow-perf run --save-baseline <name>' with a MetricsStore.
         # See COW-588 for details on the new baseline system.
+
+
+class TestTemplateBasedScenarios:
+    """Integration tests for template-based scenario creation."""
+
+    def test_load_scenario_from_ramp_up_template(self, temp_dir: Path) -> None:
+        """Test loading a scenario that uses the ramp-up template."""
+        from cow_performance.cli.commands.scenarios import load_scenario_from_yaml
+
+        # Create a scenario file using the ramp-up template
+        scenario_path = temp_dir / "test-ramp-up.yml"
+        scenario_content = """template: ramp-up
+parameters:
+  test_name: "Test Ramp Up"
+  num_traders: 5
+  duration: 300
+  start_rate: 10.0
+  target_rate: 100.0
+"""
+        with open(scenario_path, "w") as f:
+            f.write(scenario_content)
+
+        # Load and validate the scenario
+        scenario = load_scenario_from_yaml(scenario_path, show_warnings=False)
+
+        # Verify template expansion worked correctly
+        assert scenario.name == "Test Ramp Up"
+        assert scenario.num_traders == 5
+        assert scenario.duration == 300
+        assert scenario.trading_pattern == "constant_rate"
+        assert scenario.base_rate == 100.0  # Uses target_rate
+
+    def test_load_scenario_from_spike_template(self, temp_dir: Path) -> None:
+        """Test loading a scenario that uses the spike template."""
+        from cow_performance.cli.commands.scenarios import load_scenario_from_yaml
+
+        # Create a scenario file using the spike template
+        scenario_path = temp_dir / "test-spike.yml"
+        scenario_content = """template: spike
+parameters:
+  test_name: "Test Spike"
+  num_traders: 10
+  duration: 180
+  normal_rate: 10.0
+  spike_rate: 100.0
+"""
+        with open(scenario_path, "w") as f:
+            f.write(scenario_content)
+
+        # Load and validate the scenario
+        scenario = load_scenario_from_yaml(scenario_path, show_warnings=False)
+
+        # Verify template expansion worked correctly
+        assert scenario.name == "Test Spike"
+        assert scenario.num_traders == 10
+        assert scenario.duration == 180
+        assert scenario.trading_pattern == "burst"
+        assert scenario.base_rate == 10.0  # Uses normal_rate
+
+    def test_load_scenario_from_sustained_load_template(self, temp_dir: Path) -> None:
+        """Test loading a scenario that uses the sustained-load template."""
+        from cow_performance.cli.commands.scenarios import load_scenario_from_yaml
+
+        # Create a scenario file using the sustained-load template
+        scenario_path = temp_dir / "test-sustained.yml"
+        scenario_content = """template: sustained-load
+parameters:
+  test_name: "Test Sustained Load"
+  num_traders: 8
+  duration: 600
+  orders_per_minute: 30.0
+"""
+        with open(scenario_path, "w") as f:
+            f.write(scenario_content)
+
+        # Load and validate the scenario
+        scenario = load_scenario_from_yaml(scenario_path, show_warnings=False)
+
+        # Verify template expansion worked correctly
+        assert scenario.name == "Test Sustained Load"
+        assert scenario.num_traders == 8
+        assert scenario.duration == 600
+        assert scenario.trading_pattern == "constant_rate"
+        assert scenario.base_rate == 30.0
+
+    def test_template_with_custom_overrides(self, temp_dir: Path) -> None:
+        """Test that custom fields override template defaults."""
+        from cow_performance.cli.commands.scenarios import load_scenario_from_yaml
+
+        # Create a scenario with template + custom overrides
+        scenario_path = temp_dir / "test-custom.yml"
+        scenario_content = """template: sustained-load
+parameters:
+  test_name: "Custom Test"
+  num_traders: 5
+  duration: 300
+  orders_per_minute: 20.0
+
+# Override template defaults
+tags:
+  - custom-tag
+  - override
+
+# Custom order distribution (must sum to 1.0)
+market_order_ratio: 0.6
+limit_order_ratio: 0.4
+twap_order_ratio: 0.0
+stop_loss_order_ratio: 0.0
+good_after_time_order_ratio: 0.0
+"""
+        with open(scenario_path, "w") as f:
+            f.write(scenario_content)
+
+        # Load and validate the scenario
+        scenario = load_scenario_from_yaml(scenario_path, show_warnings=False)
+
+        # Verify custom overrides took effect
+        assert "custom-tag" in scenario.tags
+        assert "override" in scenario.tags
+        assert scenario.market_order_ratio == 0.6
+        assert scenario.limit_order_ratio == 0.4
+
+    def test_list_templates_command(self) -> None:
+        """Test listing available templates."""
+        result = runner.invoke(app, ["scenarios", "--list-templates"])
+
+        assert result.exit_code == 0
+        # Verify our three templates are shown (may be truncated in table)
+        assert "ramp-up" in result.stdout
+        assert "spike" in result.stdout
+        assert "sustai" in result.stdout  # May be truncated to "sustai…" in narrow columns
+
+    def test_validate_template_based_scenario(self, temp_dir: Path) -> None:
+        """Test validating a template-based scenario file."""
+        # Create a valid template-based scenario
+        scenario_path = temp_dir / "valid-template.yml"
+        scenario_content = """template: ramp-up
+parameters:
+  test_name: "Valid Test"
+  num_traders: 5
+  duration: 300
+  start_rate: 5.0
+  target_rate: 50.0
+"""
+        with open(scenario_path, "w") as f:
+            f.write(scenario_content)
+
+        # Validate via CLI
+        result = runner.invoke(app, ["scenarios", "--validate", str(scenario_path)])
+
+        assert result.exit_code == 0
+        assert "valid" in result.stdout.lower() or "✓" in result.stdout

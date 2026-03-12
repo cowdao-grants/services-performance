@@ -1,0 +1,11 @@
+# Example: Sustained Load Test
+# This example uses the sustained-load template to create a stability test
+# that maintains constant load for an extended period.
+
+template: sustained-load
+parameters:
+  test_name: "Sustained Load Example"
+  num_traders: 8
+  duration: 600  # 10 minutes
+  orders_per_minute: 30.0  # 30 orders/min per trader
+  env: "example"

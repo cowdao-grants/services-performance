@@ -1,0 +1,81 @@
+# Ramp-Up Load Test Template
+# Gradually increases load from start_rate to target_rate to identify breaking points
+
+template_metadata:
+  name: ramp-up
+  description: Gradually increase load to test system scaling behavior and identify breaking points
+  parameters:
+    - name: test_name
+      type: string
+      required: false
+      default: "Ramp-Up Load Test"
+      description: "Name of the test scenario"
+    - name: num_traders
+      type: int
+      required: true
+      description: "Number of concurrent traders generating load"
+    - name: duration
+      type: int
+      required: true
+      description: "Test duration in seconds (should be >= ramp_duration)"
+    - name: start_rate
+      type: float
+      required: true
+      description: "Starting order rate (orders per minute per trader) - should be low"
+    - name: target_rate
+      type: float
+      required: true
+      description: "Target order rate (orders per minute per trader) - the peak load"
+    - name: ramp_curve
+      type: string
+      required: false
+      default: "linear"
+      description: "Ramp curve type (linear or exponential)"
+    - name: env
+      type: string
+      required: false
+      default: "test"
+      description: "Environment tag"
+
+# Scenario configuration
+name: "${test_name:-Ramp-Up Load Test}"
+description: "Ramp from ${start_rate} to ${target_rate} orders/min with ${num_traders} traders"
+version: "1.0"
+
+tags:
+  - "${env:-test}"
+  - "ramp-up"
+  - "load-test"
+  - "scaling"
+
+# Trader configuration
+num_traders: ${num_traders}
+duration: ${duration}
+startup_interval: 0.1
+
+# Order type distribution (favor market orders for realistic load testing)
+market_order_ratio: 0.6
+limit_order_ratio: 0.4
+twap_order_ratio: 0.0
+stop_loss_order_ratio: 0.0
+good_after_time_order_ratio: 0.0
+
+# Trading pattern - constant rate at target load
+trading_pattern: "constant_rate"
+base_rate: ${target_rate}  # Target orders per minute
+
+# Note: This template uses constant_rate pattern. For actual ramp-up behavior,
+# you may need to use external load testing tools or implement custom traders.
+# The start_rate and ramp parameters are for documentation/planning purposes.
+
+# Metadata
+metadata:
+  expected_duration_seconds: ${duration}
+  resources:
+    min_memory_gb: 4
+    recommended_memory_gb: 8
+
+# Success criteria (relaxed for ramp tests as system may reach limits)
+success_criteria:
+  min_success_rate: 0.90
+  max_error_rate: 0.10
