@@ -254,53 +254,15 @@ good_after_time_order_ratio: 0.0
 
 ### Recommended Thresholds
 
-**Conservative (production-grade):**
-```yaml
-success_criteria:
-  min_success_rate: 0.99        # 99% success
-  max_error_rate: 0.01          # 1% errors
-  max_p95_latency_seconds: 5.0  # 5s P95
-  min_throughput_per_second: 10.0
-```
+| Level | `min_success_rate` | `max_p95_latency_seconds` | When to use |
+|-------|--------------------|---------------------------|-------------|
+| Conservative | 0.99 | 5.0 | Production SLAs, CI gates |
+| Moderate | 0.95 | 10.0 | Development / staging |
+| Lenient | 0.85 | 20.0 | Stress tests (expect some failures) |
 
-**Moderate (development/staging):**
-```yaml
-success_criteria:
-  min_success_rate: 0.95        # 95% success
-  max_error_rate: 0.05          # 5% errors
-  max_p95_latency_seconds: 10.0 # 10s P95
-  min_throughput_per_second: 5.0
-```
+Set `max_error_rate` to `1.0 - min_success_rate`. For `min_throughput_per_second`, derive from your SLA requirements accounting for concurrent traders.
 
-**Lenient (stress testing - expect some failures):**
-```yaml
-success_criteria:
-  min_success_rate: 0.85        # 85% success
-  max_error_rate: 0.15          # 15% errors
-  max_p95_latency_seconds: 20.0 # 20s P95
-```
-
-### Criteria Selection Guide
-
-**Success Rate:**
-- Production SLA: 0.99+ (99%+)
-- Standard testing: 0.95 (95%)
-- Stress testing: 0.85-0.90 (85-90%)
-
-**Error Rate:**
-- Inverse of success rate: `1.0 - min_success_rate`
-- Account for transient failures
-- Consider retry logic in your application
-
-**Latency (P95):**
-- Interactive workloads: <2s
-- Background processing: <10s
-- Batch operations: <30s
-
-**Throughput:**
-- Set based on business requirements
-- Consider: orders per second needed to meet SLA
-- Account for concurrent traders
+See [configuration reference](configuration-reference.md#success-criteria) for all fields and constraints.
 
 ---
 
