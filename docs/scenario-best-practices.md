@@ -223,36 +223,7 @@ Example: 10 traders × 60 orders/min = 600 orders/min system-wide
 
 ## Order Type Distribution
 
-All ratios must sum to **exactly 1.0**.
-
-### Recommended Distributions
-
-**Balanced (realistic usage):**
-```yaml
-market_order_ratio: 0.4
-limit_order_ratio: 0.4
-twap_order_ratio: 0.1
-stop_loss_order_ratio: 0.05
-good_after_time_order_ratio: 0.05
-```
-
-**High-throughput (maximum load):**
-```yaml
-market_order_ratio: 0.7  # Market orders are fastest
-limit_order_ratio: 0.3
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
-```
-
-**Conditional-heavy (complex orders):**
-```yaml
-market_order_ratio: 0.2
-limit_order_ratio: 0.2
-twap_order_ratio: 0.3
-stop_loss_order_ratio: 0.2
-good_after_time_order_ratio: 0.1
-```
+All ratios must sum to **exactly 1.0**. See [configuration reference](configuration-reference.md#order-type-distribution) for standard distributions (balanced, high-throughput, conditional-heavy).
 
 **Single-type (testing specific functionality):**
 ```yaml
@@ -471,23 +442,6 @@ success_criteria:
 
 ## Troubleshooting
 
-### Problem: Tests failing validation
-
-**Symptoms:**
-```
-Error: Order ratios sum to 0.9, must equal 1.0
-```
-
-**Solution:**
-```yaml
-# Ensure ratios sum to exactly 1.0
-market_order_ratio: 0.6
-limit_order_ratio: 0.4
-twap_order_ratio: 0.0       # Include all 5 types
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
-```
-
 ### Problem: Scenario too slow
 
 **Symptoms:**
@@ -529,29 +483,6 @@ good_after_time_order_ratio: 0.0
 3. **Check for external factors** (other processes, network)
 4. **Run multiple iterations and compare baselines**
 
-### Problem: Template not found
-
-**Symptoms:**
-```
-Error: Template 'my-template' not found
-```
-
-**Solutions:**
-
-1. **Check available templates:**
-   ```bash
-   cow-perf scenarios --list-templates
-   ```
-
-2. **Use correct template name:**
-   ```yaml
-   template: ramp-up  # Not: ramp_up or rampup
-   ```
-
-3. **Check template directories:**
-   - Built-in: `configs/templates/`
-   - Custom: `~/.cow-perf/templates/`
-
 ### Problem: Success criteria too strict
 
 **Symptoms:**
@@ -585,22 +516,6 @@ Before running a scenario, verify:
 - [ ] Success criteria (if present) are realistic
 - [ ] Template parameters are all provided (if using template)
 - [ ] Trading pattern matches test goals
-
-### Validation Commands
-
-```bash
-# Validate scenario file
-cow-perf scenarios --validate my-scenario.yml
-
-# List all scenarios with metadata
-cow-perf scenarios
-
-# List templates
-cow-perf scenarios --list-templates
-
-# Test scenario (dry run - no actual orders)
-cow-perf run --config my-scenario.yml --dry-run
-```
 
 ---
 
