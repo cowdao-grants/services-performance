@@ -549,7 +549,7 @@ Error: Template 'my-template' not found
    ```
 
 3. **Check template directories:**
-   - Built-in: `configs/templates/`
+   - Built-in: `configs/scenarios/templates/`
    - Custom: `~/.cow-perf/templates/`
 
 ### Problem: Success criteria too strict
