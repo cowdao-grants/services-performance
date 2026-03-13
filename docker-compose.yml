@@ -199,7 +199,7 @@ services:
     restart: always
     command: ["run", "--config-path", "/config.json"]
     volumes:
-      - ./config/watch-tower-config.json:/config.json
+      - ./configs/watch-tower-config.json:/config.json
     logging:
       driver: "json-file"
       options:
