@@ -1,0 +1,41 @@
+# Regression detection thresholds for cow-perf comparison engine.
+#
+# To use this file:
+#   export COW_PERF_THRESHOLD_FILE=configs/thresholds.toml
+#
+# To select a built-in profile instead:
+#   export COW_PERF_THRESHOLD_PROFILE=strict   # tighter thresholds
+#   export COW_PERF_THRESHOLD_PROFILE=relaxed  # looser thresholds
+#   export COW_PERF_THRESHOLD_PROFILE=default  # same as the values below
+#
+# All metric threshold values are percentages expressed as decimals (0.10 = 10%).
+
+# Latency thresholds — triggered by latency INCREASES
+[latency]
+minor    = 0.10   # 10% increase → minor regression
+major    = 0.15   # 15% increase → major regression
+critical = 0.30   # 30% increase → critical regression
+
+# Throughput thresholds — triggered by throughput DECREASES
+[throughput]
+minor    = 0.10   # 10% decrease → minor regression
+major    = 0.25   # 25% decrease → major regression
+critical = 0.50   # 50% decrease → critical regression
+
+# Error-rate thresholds — triggered by error-rate INCREASES
+[error_rate]
+minor    = 0.01   # 1 pp increase → minor regression
+major    = 0.02   # 2 pp increase → major regression
+critical = 0.05   # 5 pp increase → critical regression
+
+# Resource-usage thresholds (CPU, memory) — triggered by INCREASES
+[resource]
+minor    = 0.10   # 10% increase → minor regression
+major    = 0.20   # 20% increase → major regression
+critical = 0.50   # 50% increase → critical regression
+
+# Statistical settings
+[statistics]
+significance_level = 0.05   # p-value cutoff for Welch's t-test
+min_effect_size    = 0.20   # minimum Cohen's d to flag a finding
+rate_significance  = 0.01   # minimum absolute change in rate metrics (1 pp)
