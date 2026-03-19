@@ -204,8 +204,14 @@ class PerformanceTestConfig(BaseSettings):
     )
 
     # Aliases for scenario compatibility
-    num_traders: int | None = Field(default=None, ge=1, description="Number of concurrent traders (alias for default_trader_count)")
-    duration: int | None = Field(default=None, ge=1, description="Test duration in seconds (alias for default_duration)")
+    num_traders: int | None = Field(
+        default=None,
+        ge=1,
+        description="Number of concurrent traders (alias for default_trader_count)",
+    )
+    duration: int | None = Field(
+        default=None, ge=1, description="Test duration in seconds (alias for default_duration)"
+    )
     default_startup_interval: float = Field(
         default=0.1,
         ge=0.0,

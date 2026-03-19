@@ -16,7 +16,6 @@ The reconciliation process:
 import logging
 import os
 from dataclasses import dataclass
-from typing import List, Optional, Set
 
 import psycopg2  # type: ignore
 from web3 import Web3
