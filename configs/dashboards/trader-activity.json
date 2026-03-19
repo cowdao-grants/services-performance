@@ -225,7 +225,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(cow_perf_trader_orders_filled_total) / sum(cow_perf_trader_orders_submitted_total) * 100",
+          "expr": "(cow_perf_orders_onchain_status{scenario=~\"$scenario\", status=\"filled\"} / (cow_perf_orders_onchain_status{scenario=~\"$scenario\", status=\"filled\"} + cow_perf_orders_onchain_status{scenario=~\"$scenario\", status=\"unfilled\"})) * 100",
           "legendFormat": "Fill Rate",
           "refId": "A"
         }

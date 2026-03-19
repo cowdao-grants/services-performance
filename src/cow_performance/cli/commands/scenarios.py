@@ -130,7 +130,7 @@ class ScenarioConfig(BaseModel):
     # Trading pattern
     trading_pattern: str = Field(
         default="constant_rate",
-        description="Trading pattern (constant_rate, burst, random_interval)",
+        description="Trading pattern (constant_rate, burst, random_interval, time_based, ramp_up, ramp_down, spike, poisson)",
     )
     base_rate: float = Field(
         default=60.0,
@@ -171,7 +171,16 @@ class ScenarioConfig(BaseModel):
     @classmethod
     def validate_trading_pattern(cls, v: str) -> str:
         """Validate trading pattern."""
-        allowed = ["constant_rate", "burst", "random_interval"]
+        allowed = [
+            "constant_rate",
+            "burst",
+            "random_interval",
+            "time_based",
+            "ramp_up",
+            "ramp_down",
+            "spike",
+            "poisson",
+        ]
         if v not in allowed:
             raise ValueError(f"Trading pattern must be one of: {', '.join(allowed)}, got: {v}")
         return v

@@ -1,9 +1,14 @@
 # CoW Performance Testing Suite Scenario
 # Light Load: Low-intensity baseline test for system health checks
 
+# Scenario metadata
+name: "Light Load"
+description: "Low-intensity baseline test for system health checks"
+tags: ["light", "baseline", "health-check"]
+
 # Test configuration
-default_trader_count: 3
-default_duration: 120  # 2 minutes
+num_traders: 3
+duration: 120  # 2 minutes
 
 # Network settings
 network:

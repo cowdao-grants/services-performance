@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -175,6 +175,7 @@ class PerformanceTestConfig(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="COW_",
         case_sensitive=False,
+        extra="allow",  # Allow extra fields like name, description, tags from scenarios
     )
 
     # Nested configurations
@@ -184,7 +185,13 @@ class PerformanceTestConfig(BaseSettings):
     wallet: WalletConfig = Field(default_factory=WalletConfig)
     order_cleanup: OrderCleanupConfig = Field(default_factory=OrderCleanupConfig)
 
-    # Default test parameters
+    # Scenario metadata (optional, for scenario files)
+    name: str | None = Field(default=None, description="Scenario name")
+    description: str | None = Field(default=None, description="Scenario description")
+    tags: list[str] | None = Field(default=None, description="Scenario tags")
+    version: str | None = Field(default=None, description="Scenario version")
+
+    # Default test parameters (support both old and new field names)
     default_trader_count: int = Field(
         default=10,
         ge=1,
@@ -195,6 +202,10 @@ class PerformanceTestConfig(BaseSettings):
         ge=1,
         description="Default test duration in seconds",
     )
+
+    # Aliases for scenario compatibility
+    num_traders: int | None = Field(default=None, ge=1, description="Number of concurrent traders (alias for default_trader_count)")
+    duration: int | None = Field(default=None, ge=1, description="Test duration in seconds (alias for default_duration)")
     default_startup_interval: float = Field(
         default=0.1,
         ge=0.0,
@@ -419,6 +430,25 @@ class PerformanceTestConfig(BaseSettings):
                 f"Order type ratios must sum to 1.0, got {total}. "
                 f"Adjust the ratios in your configuration."
             )
+
+    @model_validator(mode="before")
+    @classmethod
+    def map_scenario_fields(cls, values: dict[str, Any]) -> dict[str, Any]:
+        """Map scenario field names to config field names for compatibility.
+
+        This allows scenarios to use 'num_traders' and 'duration' while the config
+        internally uses 'default_trader_count' and 'default_duration'.
+        """
+        if isinstance(values, dict):
+            # Map num_traders -> default_trader_count
+            if "num_traders" in values and "default_trader_count" not in values:
+                values["default_trader_count"] = values["num_traders"]
+
+            # Map duration -> default_duration
+            if "duration" in values and "default_duration" not in values:
+                values["default_duration"] = values["duration"]
+
+        return values
 
 
 def find_config_file() -> Path | None:

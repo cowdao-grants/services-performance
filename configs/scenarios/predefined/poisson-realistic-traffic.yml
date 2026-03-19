@@ -1,9 +1,14 @@
 # CoW Performance Testing Suite Scenario
 # Poisson Realistic Traffic: Statistically realistic user behavior simulation
 
+# Scenario metadata
+name: "Poisson Realistic Traffic"
+description: "Statistically realistic user behavior simulation using Poisson distribution"
+tags: ["poisson", "realistic", "statistical"]
+
 # Test configuration
-default_trader_count: 20
-default_duration: 600  # 10 minutes
+num_traders: 20
+duration: 600  # 10 minutes
 
 # Network settings
 network:

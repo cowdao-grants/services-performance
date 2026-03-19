@@ -878,7 +878,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "cow_perf_orders_submitted_total{scenario=~\"$scenario\"} - cow_perf_orders_filled_total{scenario=~\"$scenario\"} - cow_perf_orders_active{scenario=~\"$scenario\"}",
+          "expr": "cow_perf_orders_failed_total{scenario=~\"$scenario\"}",
           "legendFormat": "Failed",
           "refId": "A"
         }
