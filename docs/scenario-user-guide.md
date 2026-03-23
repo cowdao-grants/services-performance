@@ -423,7 +423,7 @@ cow-perf run --config .cow-perf.yml
 Some scenarios (like those in `configs/scenarios/`) include full configuration:
 
 ```bash
-cow-perf run --config configs/scenarios/light-load.yml
+cow-perf run --config configs/scenarios/predefined/light-load.yml
 ```
 
 ---

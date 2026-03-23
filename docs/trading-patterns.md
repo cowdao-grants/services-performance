@@ -1,10 +1,19 @@
-# Trading Strategies Guide
+# Trading Patterns Guide
 
-This document explains the different trading patterns available in the CoW Performance Testing Suite, when to use each pattern, and how to configure them.
+This document explains the different order submission patterns available in the CoW Performance Testing Suite. These patterns control the timing and rate of order submissions during tests.
+
+**See also**: [Configuration Reference](configuration-reference.md#trading-patterns) for parameter details.
 
 ## Overview
 
-The CoW Performance Testing Suite supports multiple trading patterns to simulate realistic user behavior and test the orderbook under various load conditions. Each pattern serves specific testing purposes and mimics different real-world scenarios.
+The CoW Performance Testing Suite supports multiple order submission patterns to simulate realistic user behavior and test the orderbook under various load conditions. Each pattern serves specific testing purposes and mimics different real-world scenarios.
+
+## Implementation
+
+All patterns are implemented in `TraderSimulator`:
+- Source: `src/cow_performance/load_generation/trader_simulator.py`
+- Pattern enum: lines 22-33
+- Pattern logic: lines 554-712
 
 ## Available Patterns
 
@@ -39,7 +48,223 @@ base_rate: 30.0  # 30 orders per minute (0.5 orders/sec)
 
 ---
 
-### 2. RAMP_UP
+### 2. RANDOM_INTERVAL
+
+**Description:** Submits orders at random intervals within a configurable range.
+
+**Use Case:**
+- Simulating realistic human trading behavior
+- Testing orderbook under unpredictable load
+- Avoiding artificial patterns in submissions
+- Load variance testing
+
+**Configuration Example:**
+
+```yaml
+trading_pattern: "random_interval"
+min_interval: 5.0   # Minimum 5 seconds between orders
+max_interval: 30.0  # Maximum 30 seconds between orders
+```
+
+**Behavior:**
+- Each order submission waits a random duration between min_interval and max_interval
+- Uses uniform distribution (all intervals equally likely)
+- Example: min=5s, max=30s → orders submitted every 5-30 seconds randomly
+- Average rate: 1 / ((min_interval + max_interval) / 2)
+
+**When to Use:**
+- Testing real-world user behavior patterns
+- Avoiding resonance with orderbook operations
+- Load tests requiring natural variance
+- Capacity finding with unpredictable load
+
+**Pattern Selection Guidelines:**
+
+| Interval Range | Orders/Minute (avg) | Use Case |
+|----------------|---------------------|----------|
+| 2-10s | 5-30 | High variance, aggressive testing |
+| 5-30s | 2-12 | Moderate variance, realistic behavior |
+| 10-60s | 1-6 | Low frequency, background trading |
+
+**Complete Example:**
+
+```yaml
+name: "realistic-user-behavior"
+description: "Simulates natural user trading with random intervals"
+
+num_traders: 15
+duration: 600  # 10 minutes
+
+trading_pattern: "random_interval"
+min_interval: 10.0
+max_interval: 45.0  # Average ~27.5s = ~2.2 orders/min per trader
+
+market_order_ratio: 0.6
+limit_order_ratio: 0.4
+twap_order_ratio: 0.0
+stop_loss_order_ratio: 0.0
+good_after_time_order_ratio: 0.0
+```
+
+**Implementation:** `trader_simulator.py:202-203, 563-566`
+
+---
+
+### 3. TIME_BASED
+
+**Description:** Adjusts order submission rate based on time of day, with higher activity during configured hours.
+
+**Use Case:**
+- Simulating business hours trading patterns
+- Testing daily load variations
+- Capacity planning for peak hours
+- Modeling real-world usage patterns with time zones
+
+**Configuration Example:**
+
+```yaml
+trading_pattern: "time_based"
+base_rate: 30.0           # Orders/minute during normal hours
+active_hours: [9, 10, 11, 12, 13, 14, 15, 16]  # 9 AM - 4 PM (UTC)
+active_multiplier: 2.0    # 2x rate during active hours
+```
+
+**Behavior:**
+- During active_hours: interval = base_interval / active_multiplier (faster submissions)
+- Outside active_hours: interval = base_interval (normal rate)
+- Example: base_rate=30/min, multiplier=2.0 → 60 orders/min during active hours
+- Uses local system time (time.localtime().tm_hour)
+
+**When to Use:**
+- Testing production-like daily patterns
+- Capacity planning for peak trading hours
+- Geographic time zone simulation
+- Stress testing during business hours only
+
+**Pattern Configuration Guidelines:**
+
+| Scenario | Base Rate | Active Hours | Multiplier | Peak Load |
+|----------|-----------|--------------|------------|-----------|
+| Light load | 20/min | 8-16 (8 hours) | 2.0 | 40/min during peak |
+| Moderate load | 40/min | 9-17 (8 hours) | 3.0 | 120/min during peak |
+| Heavy load | 60/min | 10-14 (4 hours) | 5.0 | 300/min during peak |
+
+**Complete Example:**
+
+```yaml
+name: "business-hours-simulation"
+description: "Higher trading volume during market hours (UTC)"
+
+num_traders: 20
+duration: 86400  # 24 hours for full daily cycle
+
+trading_pattern: "time_based"
+base_rate: 20.0              # 20 orders/min baseline
+active_hours: [13, 14, 15, 16, 17, 18, 19, 20]  # 1 PM - 8 PM UTC (US trading)
+active_multiplier: 4.0       # 80 orders/min during US market hours
+
+market_order_ratio: 0.7
+limit_order_ratio: 0.3
+twap_order_ratio: 0.0
+stop_loss_order_ratio: 0.0
+good_after_time_order_ratio: 0.0
+```
+
+**Important Notes:**
+- Uses UTC/local system time - ensure test environment time zone is correct
+- For 24-hour tests, consider multiple active hour ranges
+- Active hours use 24-hour format (0-23)
+
+**Implementation:** `trader_simulator.py:209-213, 584-587`
+
+---
+
+### 4. BURST
+
+**Description:** Submits rapid bursts of orders followed by quiet periods, creating cyclical load spikes.
+
+**Use Case:**
+- Testing resilience to sudden load spikes
+- Simulating batch trading bots
+- Queue backlog and recovery testing
+- Finding breaking points under burst load
+
+**Configuration Example:**
+
+```yaml
+trading_pattern: "burst"
+base_rate: 10.0        # Not used (placeholder for compatibility)
+burst_size: 10         # 10 orders per burst
+burst_interval: 0.5    # 0.5 seconds between orders in burst
+quiet_period: 30.0     # 30 seconds rest between bursts
+```
+
+**Behavior:**
+- Submits burst_size orders with burst_interval seconds between each
+- After completing burst, waits quiet_period seconds
+- Then repeats: burst → quiet → burst → quiet
+- Peak instantaneous load: 1 / burst_interval orders/second during burst
+- Average load: burst_size / (burst_size * burst_interval + quiet_period)
+
+**When to Use:**
+- Resilience and recovery testing
+- Simulating algorithmic trading bots
+- Testing rate limiting and backpressure
+- Queue overflow scenarios
+
+**Pattern Configuration Guidelines:**
+
+| Burst Type | burst_size | burst_interval | quiet_period | Peak Rate | Avg Rate |
+|------------|-----------|----------------|--------------|-----------|----------|
+| Gentle | 5 | 2.0s | 60.0s | 0.5/s | ~0.14/s |
+| Moderate | 10 | 1.0s | 30.0s | 1.0/s | ~0.25/s |
+| Aggressive | 20 | 0.5s | 20.0s | 2.0/s | ~0.67/s |
+| Extreme | 50 | 0.1s | 10.0s | 10.0/s | ~3.3/s |
+
+**Complete Example:**
+
+```yaml
+name: "burst-resilience-test"
+description: "Tests recovery from sudden order bursts"
+
+num_traders: 5
+duration: 300  # 5 minutes
+
+trading_pattern: "burst"
+base_rate: 60.0        # Ignored for burst pattern
+burst_size: 15         # 15 orders per burst
+burst_interval: 0.2    # 5 orders/second during burst
+quiet_period: 20.0     # 20 seconds between bursts
+
+# Use simple orders for burst testing
+market_order_ratio: 1.0
+limit_order_ratio: 0.0
+twap_order_ratio: 0.0
+stop_loss_order_ratio: 0.0
+good_after_time_order_ratio: 0.0
+
+success_criteria:
+  min_success_rate: 0.80  # Allow some failures during bursts
+  max_p95_latency_seconds: 30.0
+```
+
+**Burst Calculation Example:**
+```
+burst_size: 15 orders
+burst_interval: 0.2s
+quiet_period: 20.0s
+
+Time per cycle: (15 × 0.2s) + 20.0s = 3s + 20s = 23s
+Orders per cycle: 15
+Average rate: 15 / 23 ≈ 0.65 orders/second
+Peak rate: 1 / 0.2 = 5 orders/second (during burst only)
+```
+
+**Implementation:** `trader_simulator.py:205-207, 568-582`
+
+---
+
+### 5. RAMP_UP
 
 **Description:** Gradually increases submission rate from a low starting rate to a target rate.
 
@@ -87,7 +312,7 @@ ramp_curve: "linear"     # or "exponential"
 
 ---
 
-### 3. RAMP_DOWN
+### 6. RAMP_DOWN
 
 **Description:** Gradually decreases submission rate from a high rate to a lower rate.
 
@@ -121,7 +346,7 @@ ramp_curve: "exponential"
 
 ---
 
-### 4. SPIKE
+### 7. SPIKE
 
 **Description:** Simulates sudden traffic spikes with recovery periods between bursts.
 
@@ -163,7 +388,7 @@ spike_recovery_time: 45.0    # 45 seconds between spikes
 
 ---
 
-### 5. POISSON
+### 8. POISSON
 
 **Description:** Submits orders following a Poisson distribution for statistically realistic random intervals.
 
@@ -247,6 +472,9 @@ max_orders_per_trader_per_second: 2.0  # Max 2 orders/sec per trader
 | Pattern | Predictability | Realism | Use Case | Load Profile |
 |---------|---------------|---------|----------|--------------|
 | CONSTANT_RATE | High | Low | Baseline testing | Flat |
+| RANDOM_INTERVAL | Medium | Medium | Realistic variance | Variable |
+| TIME_BASED | Medium | High | Daily patterns | Time-dependent |
+| BURST | Low | Medium | Bot simulation | Cyclical spikes |
 | RAMP_UP | Medium | Medium | Capacity finding | Increasing |
 | RAMP_DOWN | Medium | Medium | Recovery testing | Decreasing |
 | SPIKE | Low | Medium | Burst resilience | Spiky |
@@ -510,6 +738,24 @@ random.seed(42)
 # CONSTANT_RATE
 trading_pattern: "constant_rate"
 base_rate: 30.0
+
+# RANDOM_INTERVAL
+trading_pattern: "random_interval"
+min_interval: 5.0
+max_interval: 30.0
+
+# TIME_BASED
+trading_pattern: "time_based"
+base_rate: 30.0
+active_hours: [9, 10, 11, 12, 13, 14, 15, 16]
+active_multiplier: 2.0
+
+# BURST
+trading_pattern: "burst"
+base_rate: 60.0
+burst_size: 10
+burst_interval: 0.5
+quiet_period: 30.0
 
 # RAMP_UP
 trading_pattern: "ramp_up"

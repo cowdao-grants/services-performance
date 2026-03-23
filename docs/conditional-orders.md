@@ -4,6 +4,12 @@
 >
 > **See also**: [Order Generation](order-generation.md) | [User Simulation](user-simulation.md)
 
+> **⚠️ Implementation Status**: Conditional order **generation** is fully implemented.
+> On-chain submission via ComposableCow is **NOT yet implemented**. Orders can be created
+> and signed, but will not be submitted to the blockchain or monitored for fills.
+>
+> Track implementation status: [trader_simulator.py:443-450](../src/cow_performance/load_generation/trader_simulator.py)
+
 ## Overview
 
 The order generation module supports advanced CoW Protocol conditional orders through ComposableCow, enabling TWAP, Stop-Loss, and Good-After-Time orders for sophisticated trading strategies.
@@ -53,6 +59,10 @@ batch = factory.create_batch_conditional_orders(
     order_types=["twap", "stop_loss", "good_after_time"]
 )
 ```
+
+**Important**: This example shows order creation only. The orders are not submitted to
+ComposableCow or tracked on-chain. Integration with ComposableCow contract submission
+is planned but not yet implemented.
 
 ---
 
@@ -223,6 +233,46 @@ Conditional orders use the ComposableCow framework and require:
 - **Chainlink oracles** for stop-loss orders
 
 Orders are encoded using ABI encoding and submitted to ComposableCow for conditional execution by the CoW Protocol watchtower service.
+
+---
+
+## Implementation Status
+
+### ✅ Fully Implemented
+
+- Order generation for all types (TWAP, Stop-Loss, Good-After-Time)
+- Parameter validation and ABI encoding
+- EIP-1271 signature generation for Safe wallets
+- Order templates and factory methods
+- Safe wallet deployment and management
+
+**Files:**
+- Schema: `src/cow_performance/load_generation/conditional_order_schema.py`
+- Factory: `src/cow_performance/load_generation/conditional_order_factory.py`
+- ABI Encoding: `src/cow_performance/load_generation/abi_encoding.py`
+- Safe Integration: `src/cow_performance/load_generation/safe_integration.py`
+
+### ❌ Not Implemented
+
+- On-chain submission via ComposableCow contract
+- Transaction sending and confirmation
+- ConditionalOrderCreated event watching
+- Order fill monitoring from on-chain events
+- TWAP part execution tracking
+
+**Workaround**: Conditional orders are generated with temporary UIDs and tracked locally, but do not affect on-chain state or settlement.
+
+**TODO** (from source code):
+```python
+# TODO: Implement full conditional order lifecycle tracking:
+# 1. Actually submit via composable_cow.submit_conditional_order()
+# 2. Get order UID from transaction receipt or ConditionalOrderCreated event
+# 3. Track token amounts from the generated ConditionalOrder
+# 4. Implement on-chain event watching for order fills (not API polling)
+# 5. For TWAP: track individual part executions over time
+```
+
+**Implementation Location**: `src/cow_performance/load_generation/trader_simulator.py:437-552`
 
 ---
 
