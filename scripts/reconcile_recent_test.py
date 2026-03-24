@@ -72,12 +72,12 @@ def main():
         )
 
     if report.chain_filled == 6:
-        print(f"  ✓ Found expected 6 filled orders")
+        print("  ✓ Found expected 6 filled orders")
     else:
         print(f"  ✗ Expected 6 filled orders, found {report.chain_filled}")
 
     if report.discrepancy_percentage_points == 75.0:
-        print(f"  ✓ Discrepancy is 75pp as expected (0% → 75%)")
+        print("  ✓ Discrepancy is 75pp as expected (0% → 75%)")
     else:
         print(f"  ✗ Expected 75pp discrepancy, got {report.discrepancy_percentage_points}pp")
 
