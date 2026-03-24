@@ -79,17 +79,11 @@ def main():
     if report.discrepancy_percentage_points == 75.0:
         print(f"  ✓ Discrepancy is 75pp as expected (0% → 75%)")
     else:
-        print(
-            f"  ✗ Expected 75pp discrepancy, got {report.discrepancy_percentage_points}pp"
-        )
+        print(f"  ✗ Expected 75pp discrepancy, got {report.discrepancy_percentage_points}pp")
 
     print("\n💡 Key Insight:")
-    print(
-        "  The database shows 0% fill rate, but the chain proves 75% of orders were filled."
-    )
-    print(
-        "  This demonstrates the event sync issue in Anvil fork mode and the need for"
-    )
+    print("  The database shows 0% fill rate, but the chain proves 75% of orders were filled.")
+    print("  This demonstrates the event sync issue in Anvil fork mode and the need for")
     print("  chain-based reconciliation to get accurate metrics.\n")
 
     return 0 if report.chain_filled == 6 else 1
