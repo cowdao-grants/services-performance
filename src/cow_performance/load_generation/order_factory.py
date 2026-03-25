@@ -342,7 +342,8 @@ class OrderFactory:
             # This gives the solver room to profit after gas costs (~$5-10)
             buy_amount_wei = int(int(quote["quote"]["buyAmount"]) * 0.85)
             fee_amount_wei = 0  # Fee is implicit (sellAmountBeforeFee = sellAmount + fee)
-            valid_to = int(quote["quote"]["validTo"])
+            # Override API's valid_to with our configured valid_duration for testing
+            valid_to = self._get_valid_to_timestamp()
             quote_id = quote["id"]  # Extract quote ID
         else:
             # No API client - use approximate market rates (dry-run mode)

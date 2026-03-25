@@ -20,8 +20,10 @@ thoughts/
 ├── tickets/              # Future work and technical debt
 │   ├── anvil-event-sync-issue.md
 │   └── COW-598-alerting-rules.md
-└── plans/                # Future implementation plans
-    └── 2026-02-13-cow-598-alerting-rules.md
+├── plans/                # Future implementation plans
+│   └── 2026-02-13-cow-598-alerting-rules.md
+└── analysis/             # Technical investigations
+    └── expired-orders-database-update-investigation.md
 ```
 
 ---
@@ -52,6 +54,14 @@ Implementation plans for future work.
 | File | Related Ticket | Status |
 |------|----------------|--------|
 | [2026-02-13-cow-598-alerting-rules.md](plans/2026-02-13-cow-598-alerting-rules.md) | COW-598 | 🔲 Ready (if needed) |
+
+### Analysis
+
+Technical investigations and root cause analysis.
+
+| File | Date | Description |
+|------|------|-------------|
+| [expired-orders-database-update-investigation.md](analysis/expired-orders-database-update-investigation.md) | 2026-03-24 | Investigation into why orderbook doesn't update expired orders in database; includes proposed fix using ExpirationChecker in testing suite |
 
 ---
 

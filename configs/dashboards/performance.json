@@ -79,18 +79,6 @@
       "tooltip": "Go to Trader Activity Dashboard",
       "type": "link",
       "url": "/d/cow-perf-traders"
-    },
-    {
-      "asDropdown": false,
-      "icon": "dashboard",
-      "includeVars": true,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "Reconciliation",
-      "tooltip": "Chain Reconciliation - Database vs OnChain",
-      "type": "link",
-      "url": "/d/cow-perf-reconciliation"
     }
   ],
   "liveNow": false,
@@ -694,25 +682,25 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "cow_perf_orders_filled_total{scenario=~\"$scenario\"}",
+          "expr": "sum(cow_perf_orders_filled_total{scenario=~\"$scenario\"})",
           "legendFormat": "Filled",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "cow_perf_orders_failed_total{scenario=~\"$scenario\"}",
+          "expr": "sum(cow_perf_orders_failed_total{scenario=~\"$scenario\"})",
           "legendFormat": "Failed",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "cow_perf_orders_expired_total{scenario=~\"$scenario\"}",
+          "expr": "sum(cow_perf_orders_expired_total{scenario=~\"$scenario\"})",
           "legendFormat": "Expired",
           "refId": "C"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "cow_perf_orders_active{scenario=~\"$scenario\"}",
+          "expr": "sum(cow_perf_orders_active{scenario=~\"$scenario\"})",
           "legendFormat": "Active",
           "refId": "D"
         }
@@ -798,7 +786,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "cow_perf_orders_submitted_total{scenario=~\"$scenario\"}",
+          "expr": "sum(cow_perf_orders_submitted_total{scenario=~\"$scenario\"})",
           "legendFormat": "Submitted",
           "refId": "A"
         }
@@ -838,7 +826,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "cow_perf_orders_filled_total{scenario=~\"$scenario\"}",
+          "expr": "sum(cow_perf_orders_filled_total{scenario=~\"$scenario\"})",
           "legendFormat": "Filled",
           "refId": "A"
         }
@@ -878,7 +866,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "cow_perf_orders_failed_total{scenario=~\"$scenario\"}",
+          "expr": "sum(cow_perf_orders_failed_total{scenario=~\"$scenario\"})",
           "legendFormat": "Failed",
           "refId": "A"
         }
@@ -918,7 +906,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "cow_perf_orders_active{scenario=~\"$scenario\"}",
+          "expr": "sum(cow_perf_orders_active{scenario=~\"$scenario\"})",
           "legendFormat": "Active",
           "refId": "A"
         }

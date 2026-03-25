@@ -158,6 +158,7 @@ class MetricsStore:
             order = self._orders.pop(old_uid)
             order.order_uid = new_uid
             self._orders[new_uid] = order
+            self._notify_callbacks("uid_rename", (old_uid, new_uid))
 
     # --- API Metrics Methods ---
 

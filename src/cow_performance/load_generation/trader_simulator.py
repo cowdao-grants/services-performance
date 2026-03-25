@@ -386,6 +386,7 @@ class TraderSimulator:
             sell_amount=signed_order.sellAmount,
             buy_amount=signed_order.buyAmount,
             order_type=order_type,
+            valid_to=signed_order.validTo,
         )
 
         # Update status to submitted
@@ -425,6 +426,7 @@ class TraderSimulator:
                 sell_amount=signed_order.sellAmount,
                 buy_amount=signed_order.buyAmount,
                 order_type=order_type,
+                valid_to=signed_order.validTo,
             )
             self.order_tracker.update_order_status(order_uid, OrderStatus.ACCEPTED)
 
