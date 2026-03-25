@@ -82,7 +82,9 @@ class ExpirationChecker:
         orders_without_valid_to = 0
 
         async with self.metrics_store.lock:
-            logger.info(f"ExpirationChecker: Checking {len(self.metrics_store._orders)} orders (current_time={current_time})")
+            logger.info(
+                f"ExpirationChecker: Checking {len(self.metrics_store._orders)} orders (current_time={current_time})"
+            )
             for order_uid, metadata in self.metrics_store._orders.items():
                 checked_count += 1
 
@@ -92,7 +94,9 @@ class ExpirationChecker:
                     logger.warning(f"Order {order_uid[:10]}... has no valid_to set!")
                     continue
 
-                logger.debug(f"Order {order_uid[:10]}... valid_to={metadata.valid_to}, status={metadata.current_status}, expired={metadata.valid_to < current_time}")
+                logger.debug(
+                    f"Order {order_uid[:10]}... valid_to={metadata.valid_to}, status={metadata.current_status}, expired={metadata.valid_to < current_time}"
+                )
 
                 # Skip if already marked as expired
                 if metadata.current_status == OrderStatus.EXPIRED:

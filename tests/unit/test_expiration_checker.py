@@ -203,7 +203,6 @@ class TestExpirationChecker:
             assert updated_order is not None
             assert updated_order.current_status == OrderStatus.EXPIRED
 
-
     @pytest.mark.asyncio
     async def test_double_start_warning(self, expiration_checker, caplog):
         """Test that starting an already-running checker logs a warning."""

@@ -187,7 +187,9 @@ class PrometheusExporter:
             self._remove_order_from_trader(trader_index, order.order_uid)
 
         elif status == OrderStatus.EXPIRED:
-            print(f"EXPIRED: order_uid={order.order_uid[:10]}..., was_in_active={order.order_uid in self._active_orders}, active_before={len(self._active_orders)}")
+            print(
+                f"EXPIRED: order_uid={order.order_uid[:10]}..., was_in_active={order.order_uid in self._active_orders}, active_before={len(self._active_orders)}"
+            )
             self._metrics.orders_expired.labels(scenario=scenario).inc()
             self._active_orders.discard(order.order_uid)
             print(f"EXPIRED: active_after={len(self._active_orders)}")

@@ -75,16 +75,12 @@ class TestExporterUidRename:
         exporter._on_metric_update("order", order)
         assert len(exporter._active_orders) == 0
 
-    def test_rename_uid_not_in_active_orders_is_safe(
-        self, exporter: PrometheusExporter
-    ) -> None:
+    def test_rename_uid_not_in_active_orders_is_safe(self, exporter: PrometheusExporter) -> None:
         """Renaming a UID not in active_orders must not raise."""
         exporter._on_metric_update("uid_rename", ("0xghost", "0xreal"))
         assert len(exporter._active_orders) == 0
 
-    def test_per_trader_orders_renamed_correctly(
-        self, exporter: PrometheusExporter
-    ) -> None:
+    def test_per_trader_orders_renamed_correctly(self, exporter: PrometheusExporter) -> None:
         """_orders_by_trader must contain real_uid (not temp_uid) after swap."""
         temp_uid = "0xtemp_trader"
         real_uid = "0xreal_trader"
