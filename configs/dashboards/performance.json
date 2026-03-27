@@ -79,6 +79,18 @@
       "tooltip": "Go to Trader Activity Dashboard",
       "type": "link",
       "url": "/d/cow-perf-traders"
+    },
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Reconciliation",
+      "tooltip": "Chain Reconciliation - Database vs OnChain",
+      "type": "link",
+      "url": "/d/cow-perf-reconciliation"
     }
   ],
   "liveNow": false,
