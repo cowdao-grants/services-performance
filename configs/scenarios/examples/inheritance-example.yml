@@ -1,0 +1,65 @@
+# ============================================
+# INHERITANCE EXAMPLE
+# ============================================
+# This scenario extends base-scenario.yml and overrides specific settings.
+# Demonstrates scenario inheritance and reuse.
+#
+# Key concept: Child scenarios inherit all fields from parent,
+# then override only what they need to change.
+#
+# Run: cow-perf run --scenario examples/advanced/inheritance-example.yml
+
+# Extend the base scenario
+extends: base-scenario.yml
+
+# Override name and description
+name: "Inheritance Example"
+description: "Demonstrates scenario inheritance - extends base-scenario.yml"
+
+# Add additional tags
+tags:
+  - example
+  - advanced
+  - inheritance
+
+# Override only the fields we want to change
+# All other fields are inherited from base-scenario.yml
+
+# Increase number of traders from 5 to 10
+num_traders: 10
+
+# Change to a different trading pattern
+trading_pattern: "burst"
+
+# Add burst-specific parameters
+burst_size: 5
+burst_interval: 1.0
+quiet_period: 10.0
+
+# Override market order ratio to test more market orders
+market_order_ratio: 0.8
+limit_order_ratio: 0.2
+twap_order_ratio: 0.0
+stop_loss_order_ratio: 0.0
+good_after_time_order_ratio: 0.0
+
+# Inherited from base-scenario.yml (not changed):
+# - duration: 300
+# - startup_interval: 0.5
+# - base_rate: 60.0
+# - success_criteria
+
+# ============================================
+# HOW THIS WORKS
+# ============================================
+# 1. System loads base-scenario.yml
+# 2. System loads this file
+# 3. Fields from this file override matching fields from parent
+# 4. All other fields are inherited
+# 5. Result: A complete scenario with minimal repetition
+#
+# Benefits:
+# - Reuse common configuration
+# - Maintain consistency across related tests
+# - Change base settings in one place
+# - Create scenario "families"

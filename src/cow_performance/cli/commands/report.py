@@ -105,8 +105,9 @@ def generate_report(
             # Import and use comparison engine
             try:
                 from cow_performance.comparison import ComparisonEngine
+                from cow_performance.comparison.thresholds import load_thresholds
 
-                engine = ComparisonEngine()
+                engine = ComparisonEngine(thresholds=load_thresholds())
                 comparison = engine.compare(compare_baseline, baseline)
             except ImportError:
                 console.print(

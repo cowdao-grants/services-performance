@@ -261,36 +261,7 @@ Next Steps:
 
 ### Scenario File Structure
 
-```yaml
-# Scenario metadata
-name: "example-scenario"
-description: "Example performance test scenario"
-
-# Trader configuration
-num_traders: 10
-duration: 60  # seconds
-startup_interval: 0.1
-
-# Order type distribution (must sum to 1.0)
-market_order_ratio: 0.4
-limit_order_ratio: 0.4
-twap_order_ratio: 0.1
-stop_loss_order_ratio: 0.05
-good_after_time_order_ratio: 0.05
-
-# Trading pattern
-trading_pattern: "constant_rate"  # constant_rate, burst, or random_interval
-base_rate: 60.0  # orders per minute (for constant_rate)
-
-# Burst pattern parameters (uncomment if using burst pattern)
-# burst_size: 5
-# burst_interval: 0.1
-# quiet_period: 5.0
-
-# Random interval parameters (uncomment if using random_interval)
-# min_interval: 0.5
-# max_interval: 3.0
-```
+See [Configuration Reference](configuration-reference.md) for the complete field schema, descriptions, and examples.
 
 ### Validate Scenario
 
@@ -305,17 +276,7 @@ cow-perf scenarios --validate my-scenario.yml
 
 ### Trading Patterns
 
-**Constant Rate**: Submit orders at a steady rate
-- Best for: Sustained load testing
-- Parameters: `base_rate` (orders per minute)
-
-**Burst**: Submit orders in bursts with quiet periods
-- Best for: Spike testing, simulating trading volatility
-- Parameters: `burst_size`, `burst_interval`, `quiet_period`
-
-**Random Interval**: Submit orders at random intervals
-- Best for: Realistic user behavior simulation
-- Parameters: `min_interval`, `max_interval`
+See [Configuration Reference: Trading Patterns](configuration-reference.md#trading-patterns) for all patterns, their parameters, and usage guidelines.
 
 ---
 

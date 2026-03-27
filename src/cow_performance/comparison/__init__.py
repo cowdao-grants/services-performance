@@ -14,6 +14,7 @@ from cow_performance.comparison.thresholds import (
     STRICT_THRESHOLDS,
     MetricThresholds,
     RegressionThresholds,
+    load_thresholds,
 )
 
 __all__ = [
@@ -28,4 +29,5 @@ __all__ = [
     "RegressionThresholds",
     "RELAXED_THRESHOLDS",
     "STRICT_THRESHOLDS",
+    "load_thresholds",
 ]

@@ -46,11 +46,11 @@ class TemplateExpander:
 
         Args:
             template_dirs: List of directories to search for templates
-                          (default: [configs/templates/, .cow-perf/templates/])
+                          (default: [configs/scenarios/templates/, .cow-perf/templates/])
         """
         if template_dirs is None:
             self.template_dirs = [
-                Path("configs/templates"),
+                Path("configs/scenarios/templates"),
                 Path(".cow-perf/templates"),
             ]
         else:

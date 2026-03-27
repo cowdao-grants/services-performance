@@ -1,6 +1,8 @@
 """Configurable thresholds for regression detection."""
 
+import os
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from cow_performance.comparison.models import MetricType, RegressionSeverity
@@ -101,6 +103,10 @@ class RegressionThresholds:
     # Minimum effect size (Cohen's d) to consider meaningful
     min_effect_size: float = 0.2  # Small effect
 
+    # Minimum absolute change in rate metrics (e.g. error_rate) to count as significant
+    # (e.g. 0.01 = 1 percentage point absolute difference required)
+    rate_significance: float = 0.01
+
     def get_thresholds_for_type(self, metric_type: MetricType) -> MetricThresholds:
         """Get thresholds for a specific metric type."""
         mapping = {
@@ -152,21 +158,57 @@ class RegressionThresholds:
                 "major": self.resource.major,
                 "critical": self.resource.critical,
             },
-            "significance_level": self.significance_level,
-            "min_effect_size": self.min_effect_size,
+            "statistics": {
+                "significance_level": self.significance_level,
+                "min_effect_size": self.min_effect_size,
+                "rate_significance": self.rate_significance,
+            },
         }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "RegressionThresholds":
         """Deserialize thresholds from dict."""
+        stats = data.get("statistics", {})
+        # Support both flat (legacy) and nested (TOML) formats
         return cls(
             latency=MetricThresholds(**data.get("latency", {})),
             throughput=MetricThresholds(**data.get("throughput", {})),
             error_rate=MetricThresholds(**data.get("error_rate", {})),
             resource=MetricThresholds(**data.get("resource", {})),
-            significance_level=data.get("significance_level", 0.05),
-            min_effect_size=data.get("min_effect_size", 0.2),
+            significance_level=stats.get(
+                "significance_level", data.get("significance_level", 0.05)
+            ),
+            min_effect_size=stats.get("min_effect_size", data.get("min_effect_size", 0.2)),
+            rate_significance=stats.get("rate_significance", data.get("rate_significance", 0.01)),
         )
+
+    @classmethod
+    def from_toml(cls, path: str | Path) -> "RegressionThresholds":
+        """Load thresholds from a TOML file.
+
+        Args:
+            path: Path to the TOML configuration file
+
+        Returns:
+            RegressionThresholds loaded from file
+
+        Raises:
+            FileNotFoundError: If the file does not exist
+            ValueError: If the file cannot be parsed
+        """
+        import tomllib
+
+        path = Path(path)
+        if not path.exists():
+            raise FileNotFoundError(f"Threshold config not found: {path}")
+
+        try:
+            with open(path, "rb") as f:
+                data = tomllib.load(f)
+        except Exception as e:
+            raise ValueError(f"Failed to parse threshold config {path}: {e}") from e
+
+        return cls.from_dict(data)
 
 
 # Pre-configured threshold profiles
@@ -176,6 +218,7 @@ STRICT_THRESHOLDS = RegressionThresholds(
     error_rate=MetricThresholds(minor=0.005, major=0.01, critical=0.02),
     resource=MetricThresholds(minor=0.05, major=0.15, critical=0.30),
     significance_level=0.01,
+    rate_significance=0.005,
 )
 
 RELAXED_THRESHOLDS = RegressionThresholds(
@@ -184,4 +227,48 @@ RELAXED_THRESHOLDS = RegressionThresholds(
     error_rate=MetricThresholds(minor=0.02, major=0.05, critical=0.10),
     resource=MetricThresholds(minor=0.20, major=0.40, critical=0.70),
     significance_level=0.10,
+    rate_significance=0.02,
 )
+
+# Named profiles for env var selection
+_PROFILES: dict[str, RegressionThresholds] = {
+    "default": RegressionThresholds(),
+    "strict": STRICT_THRESHOLDS,
+    "relaxed": RELAXED_THRESHOLDS,
+}
+
+
+def load_thresholds(toml_path: str | Path | None = None) -> RegressionThresholds:
+    """Load thresholds from a TOML file or env-var profile selection.
+
+    Resolution order:
+    1. ``toml_path`` argument (explicit file)
+    2. ``COW_PERF_THRESHOLD_FILE`` env var (path to a TOML file)
+    3. ``COW_PERF_THRESHOLD_PROFILE`` env var (``strict`` | ``relaxed`` | ``default``)
+    4. Built-in defaults
+
+    Args:
+        toml_path: Optional explicit path to a TOML threshold config file.
+
+    Returns:
+        RegressionThresholds to use for comparison.
+
+    Raises:
+        FileNotFoundError: If a configured file path does not exist.
+        ValueError: If an unknown profile name is given.
+    """
+    if toml_path is not None:
+        return RegressionThresholds.from_toml(toml_path)
+
+    file_env = os.environ.get("COW_PERF_THRESHOLD_FILE")
+    if file_env:
+        return RegressionThresholds.from_toml(file_env)
+
+    profile_env = os.environ.get("COW_PERF_THRESHOLD_PROFILE", "").lower().strip()
+    if profile_env:
+        if profile_env not in _PROFILES:
+            valid = ", ".join(_PROFILES)
+            raise ValueError(f"Unknown threshold profile '{profile_env}'. Valid options: {valid}")
+        return _PROFILES[profile_env]
+
+    return RegressionThresholds()
