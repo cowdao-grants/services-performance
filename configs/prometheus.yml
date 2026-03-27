@@ -49,14 +49,17 @@ scrape_configs:
           service: "driver"
           component: "cow-protocol"
 
-  # Baseline Solver metrics
-  - job_name: "baseline"
+  # Solver metrics (all baseline solvers)
+  - job_name: "solvers"
     metrics_path: /metrics
     static_configs:
-      - targets: ["baseline:80"]
+      - targets:
+          - "solver-baseline-1:80"
+          - "solver-baseline-2:80"
+          - "solver-baseline-3:80"
         labels:
-          service: "baseline"
           component: "solver"
+          solver_type: "baseline"
 
   # CoW Performance Test Suite metrics
   # Note: Only active during test runs with --prometheus-port flag

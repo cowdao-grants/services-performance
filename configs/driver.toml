@@ -16,9 +16,9 @@ tx-gas-limit = "45000000"
 
 [[solver]]
 # Name of the solver (must be unique)
-name = "solver-baseline-1"
+name = "baseline"
 
-# Solver endpoint URL
+# Solver endpoint URL (points to Docker service)
 endpoint = "http://solver-baseline-1"
 
 # Absolute slippage tolerance (in wei)
@@ -34,19 +34,6 @@ relative-slippage = "0.1"
 # For custom account, generate a new private key and fund it
 account = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 
-[[solver]]
-name = "solver-baseline-2"
-endpoint = "http://solver-baseline-2"
-absolute-slippage = "40000000000000000"
-relative-slippage = "0.1"
-account = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-
-[[solver]]
-name = "solver-baseline-3"
-endpoint = "http://solver-baseline-3"
-absolute-slippage = "40000000000000000"
-relative-slippage = "0.1"
-account = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 
 # =============================================================================
 # Transaction Submission Configuration
@@ -61,6 +48,20 @@ gas-price-cap = "1000000000000"  # 1000 Gwei
 [[submission.mempool]]
 mempool = "public"
 url = "http://chain:8545"
+
+# =============================================================================
+# Order Priority Configuration
+# =============================================================================
+
+[[order-priority]]
+strategy = "creation-timestamp"
+
+[[order-priority]]
+strategy = "external-price"
+
+[[order-priority]]
+strategy = "own-quotes"
+max-order-age = "10m"
 
 # =============================================================================
 # Smart Contract Addresses (Ethereum Mainnet)
@@ -104,33 +105,29 @@ router = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
 pool-code = "0x96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f"
 missing-pool-cache-time = "1h"
 
-# SushiSwap - Uniswap V2 fork with different liquidity pools
-[[liquidity.uniswap-v2]]
-preset = "sushi-swap"
+# SushiSwap - DISABLED FOR TESTING
+# [[liquidity.uniswap-v2]]
+# preset = "sushi-swap"
 
 # =============================================================================
-# Swapr Liquidity Source
+# Swapr Liquidity Source - DISABLED FOR TESTING
 # =============================================================================
 
-# Swapr - Uniswap V2 with extended features
-[[liquidity.swapr]]
-preset = "swapr"
+# Swapr - DISABLED FOR TESTING
+# [[liquidity.swapr]]
+# preset = "swapr"
 
 # =============================================================================
-# Uniswap V3 Liquidity Source
+# Uniswap V3 Liquidity Source - DISABLED FOR TESTING
 # =============================================================================
 
-# Uniswap V3 - Concentrated liquidity with multiple fee tiers
-[[liquidity.uniswap-v3]]
-preset = "uniswap-v3"
-# Public Uniswap V3 subgraph for Ethereum mainnet
-graph-url = "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3"
-# Initialize top 100 deepest pools on startup
-max-pools-to-initialize = 100
-# Query up to 1000 pools per tick query
-max-pools-per-tick-query = 1000
-# Reinitialize every 12 hours to discover new pools
-reinit-interval = "12h"
+# Uniswap V3 - DISABLED FOR TESTING
+# [[liquidity.uniswap-v3]]
+# preset = "uniswap-v3"
+# graph-url = "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3"
+# max-pools-to-initialize = 100
+# max-pools-per-tick-query = 1000
+# reinit-interval = "12h"
 
 # =============================================================================
 # Balancer V2 Liquidity Source

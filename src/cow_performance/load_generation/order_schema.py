@@ -148,6 +148,9 @@ class SignedOrder(BaseModel):
         default=SigningScheme.EIP712, description="Signature scheme used"
     )
     signature: str = Field(..., description="Order signature")
+    quoteId: int | None = Field(
+        default=None, description="Quote ID for market orders (enables proper classification)"
+    )
 
     model_config = ConfigDict(
         populate_by_name=True,

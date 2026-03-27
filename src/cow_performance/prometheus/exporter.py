@@ -502,3 +502,78 @@ class PrometheusExporter:
         self._metrics.regression_detected.labels(severity="critical").set(critical)
         self._metrics.regression_detected.labels(severity="major").set(major)
         self._metrics.regression_detected.labels(severity="minor").set(minor)
+
+    # --- Chain Reconciliation Methods ---
+
+    def update_from_reconciliation(
+        self,
+        total_orders: int,
+        chain_filled: int,
+        database_filled: int,
+    ) -> None:
+        """Update metrics with accurate on-chain data from reconciliation.
+
+        This corrects Prometheus metrics to reflect actual blockchain state
+        rather than inaccurate database state (relevant in Anvil fork mode).
+
+        Args:
+            total_orders: Total orders submitted during test
+            chain_filled: Orders actually filled on-chain (ground truth)
+            database_filled: Orders reported as filled by database (may be inaccurate)
+        """
+        # Calculate the discrepancy
+        discrepancy = chain_filled - database_filled
+
+        if discrepancy > 0:
+            # Database under-reported fills, add the missing fills
+            logger.info(
+                "Reconciliation: Adding %d missing fills to Prometheus metrics (chain: %d, db: %d)",
+                discrepancy,
+                chain_filled,
+                database_filled,
+            )
+            for _ in range(discrepancy):
+                self._metrics.orders_filled.labels(scenario=self.scenario).inc()
+
+        elif discrepancy < 0:
+            # Database over-reported fills (rare, but handle it)
+            logger.warning(
+                "Reconciliation: Database over-reported fills by %d (chain: %d, db: %d)",
+                abs(discrepancy),
+                chain_filled,
+                database_filled,
+            )
+            # Note: We can't decrement counters in Prometheus, but we log the issue
+
+        # Set gauges with accurate values
+        chain_fill_rate = (chain_filled / total_orders * 100) if total_orders > 0 else 0.0
+        db_fill_rate = (database_filled / total_orders * 100) if total_orders > 0 else 0.0
+        discrepancy_pp = chain_fill_rate - db_fill_rate
+
+        # Update active orders gauge to reflect chain reality
+        chain_unfilled = total_orders - chain_filled
+        self._metrics.orders_active.labels(scenario=self.scenario).set(chain_unfilled)
+
+        # Update database vs on-chain comparison metrics
+        self._metrics.orders_database_status.labels(scenario=self.scenario, status="filled").set(
+            database_filled
+        )
+        self._metrics.orders_database_status.labels(scenario=self.scenario, status="open").set(
+            total_orders - database_filled
+        )
+
+        self._metrics.orders_onchain_status.labels(scenario=self.scenario, status="filled").set(
+            chain_filled
+        )
+        self._metrics.orders_onchain_status.labels(scenario=self.scenario, status="unfilled").set(
+            total_orders - chain_filled
+        )
+
+        self._metrics.reconciliation_discrepancy.labels(scenario=self.scenario).set(discrepancy_pp)
+
+        logger.info(
+            "Reconciliation complete: Chain fill rate: %.1f%%, Database fill rate: %.1f%%, Discrepancy: %.1fpp",
+            chain_fill_rate,
+            db_fill_rate,
+            discrepancy_pp,
+        )

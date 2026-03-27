@@ -96,6 +96,9 @@ cow-perf run --config configs/scenarios/enhanced/regression-test.yml \
   --baseline-description "CI/CD regression baseline"
 ```
 
+**Note about Anvil fork mode:**
+> In Anvil fork mode, database event synchronization is limited. The test suite automatically performs **chain reconciliation** after each test to verify actual on-chain fill rates and update the database. This ensures all metrics (reports, Prometheus, Grafana) reflect blockchain reality. See [Known Limitations](#known-limitations) for details.
+
 ### Choosing the Right Scenario
 
 | Your Goal | Use This Scenario | Why |
@@ -742,6 +745,61 @@ cow-performance-testing-suite/
 ├── docs/                    # Documentation
 └── docker/                  # Docker configuration
 ```
+
+## Known Limitations
+
+### Anvil Fork Mode - Event Synchronization Issue
+
+**Issue:** In Anvil fork mode, the CoW Protocol services cannot detect settlement events due to missing `debug_traceTransaction` RPC support. This causes database metrics to show 0% fill rate even when settlements are executing successfully on-chain.
+
+**Impact:**
+- Fill rate metrics show 0% despite actual fills being 50-75%
+- Order statuses remain "open" in database even when filled on-chain
+- Performance metrics are inaccurate during testing
+
+**Root Cause:** Anvil (Foundry's local node) doesn't implement the `debug_traceTransaction` RPC method that autopilot requires for event post-processing. This is a fundamental limitation of Anvil, not a bug in CoW Protocol or this testing suite.
+
+**Solution:** The test suite automatically performs chain reconciliation after every test:
+
+```bash
+# Chain reconciliation runs automatically on every test
+cow-perf run --config my-scenario.yml
+```
+
+The automatic reconciliation:
+1. Query the settlement contract for Trade events in the test block range
+2. Match events to submitted orders
+3. **Update the database** with accurate trade records
+4. Update Prometheus metrics with accurate on-chain data
+5. Display accurate fill rate comparison:
+   - Database reported (inaccurate)
+   - On-chain reality (accurate)
+   - Discrepancy analysis
+
+**Database Updates:** Chain reconciliation automatically inserts missing trade records into the PostgreSQL database, fixing order statuses to reflect on-chain reality. This prevents stale "unfilled" orders from polluting subsequent auctions.
+
+**Prometheus/Grafana:** After reconciliation completes, Prometheus metrics are automatically updated with the accurate on-chain fill rates, so Grafana dashboards will show correct data.
+
+**Example Output:**
+```
+Chain Reconciliation:
+  Block range: 24673430 → 24673700
+  Orders submitted: 8
+  Database reported: 0 filled
+
+================================================================================
+CHAIN RECONCILIATION REPORT
+================================================================================
+
+📊 Fill Rate Comparison:
+  Database Reports:  0/8 filled (0.0%)
+  On-Chain Reality:  6/8 filled (75.0%)
+
+⚠️ Discrepancy: +75.0 percentage points
+  → Database is UNDER-reporting fills by 75.0pp
+```
+
+**Long-term Solution:** A proper fix requires implementing a custom event indexer that works with Anvil's limitations. This is tracked in our internal issue tracker. Chain reconciliation now runs automatically on every test in fork mode to ensure accurate metrics.
 
 ## Contributing
 

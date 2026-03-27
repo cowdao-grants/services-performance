@@ -18,9 +18,9 @@
 
 ## Current Project Status
 
-**Completed Milestones**: M2 (Performance Benchmarking)
-**Active Work**: M4 (Scenario System & Configuration)
-**Next Milestone**: M3 (Metrics & Visualization) - COW-591, COW-593, COW-598
+**Completed Milestones**: M2 (Performance Benchmarking), M4 (Scenario System & Configuration)
+**Active Work**: M5 (Final Validation & Production Readiness) - M5-Issue-17
+**Next Milestone**: Production Deployment (pending critical fixes)
 
 > **For M3 developers**: Each completed M2 ticket (COW-588, COW-589, COW-590) includes an "Implementation Notes" section at the bottom documenting architectural decisions and deviations from the original scope. Review these before starting M3 to understand what was built vs. what was deferred.
 
@@ -37,14 +37,22 @@
 | COW-590 | ✅ Done | Automated Reporting |
 | COW-608 | ✅ Done | README Restructuring |
 
-### M4 - Scenario System & Configuration (IN PROGRESS)
+### M4 - Scenario System & Configuration (COMPLETE)
 
 | Ticket | Status | Description |
 |--------|--------|-------------|
 | M4-Issue-14 | ✅ Done | Predefined Test Scenarios Library |
 | M4-Issue-15 | ✅ Done | Enhanced Configuration Architecture |
 
-**Recent Completion**: Configuration system with templates, interactive wizard (`cow-perf config-init`), and comprehensive documentation (user guide, configuration reference, best practices).
+**Completion**: Configuration system with templates, interactive wizard (`cow-perf config-init`), and comprehensive documentation (user guide, configuration reference, best practices).
+
+### M5 - Final Validation & Production Readiness (IN PROGRESS)
+
+| Ticket | Status | Description |
+|--------|--------|-------------|
+| M5-Issue-17 | ⚠️ In Progress | End-to-End Validation and Missing Metrics Discovery |
+
+**Current Status**: Validation complete, 3 critical fixes required before production deployment.
 
 ### M3 - Metrics & Visualization (QUEUED)
 
@@ -94,6 +102,8 @@ Local copies of Linear tickets. **These are the source of truth** - do not updat
 | [COW-609-foundation-data-models-storage.md](tickets/COW-609-foundation-data-models-storage.md) | COW-609 | ✅ Done | M2 | | data-models, MetricsStore, export |
 | [COW-610-collection-lifecycle-api-monitoring.md](tickets/COW-610-collection-lifecycle-api-monitoring.md) | COW-610 | ✅ Done | M2 | | lifecycle, API, resource-monitoring |
 | [COW-611-analysis-aggregation-realtime.md](tickets/COW-611-analysis-aggregation-realtime.md) | COW-611 | ✅ Done | M2 | | aggregation, percentiles, streaming |
+| [m5-issue-17-e2e-validation.md](tickets/m5-issue-17-e2e-validation.md) | M5-Issue-17 | ⚠️ In Progress | M5 | 📝 | validation, e2e-testing, metrics-discovery, production-readiness |
+| [anvil-event-sync-issue.md](tickets/anvil-event-sync-issue.md) | - | ✅ Resolved | - | 🐛 | event-sync, anvil, metrics-accuracy, chain-reconciliation, debug_traceTransaction, database-updates |
 
 ### Ticket Hierarchy
 
@@ -147,6 +157,7 @@ Detailed implementation approaches for tickets. Read these before implementing t
 | [2026-02-13-cow-598-alerting-rules.md](plans/2026-02-13-cow-598-alerting-rules.md) | COW-598 | 🔲 Ready | Prometheus alerts, alerting rules, thresholds, Grafana annotations |
 | [m4-issue-14-predefined-scenarios-plan.md](plans/m4-issue-14-predefined-scenarios-plan.md) | M4-Issue-14 | 👀 In Review | scenarios, tags, metadata, success-criteria, CI/CD, documentation |
 | [2026-03-10-m4-issue-15-configuration-architecture.md](plans/2026-03-10-m4-issue-15-configuration-architecture.md) | M4-Issue-15 | ✅ Complete | configuration-system, inheritance, templates, profiles, defaults, validation, config-generator, wizard |
+| [m5-issue-17-action-items.md](plans/m5-issue-17-action-items.md) | M5-Issue-17 | 🔧 Ready | critical-fixes, scenario-schema, prometheus, e2e-tests, healthchecks, monitoring |
 
 ---
 
@@ -168,6 +179,7 @@ Investigation reports and analysis of production issues, performance problems, a
 |------|------|---------|----------|
 | [docker-disk-usage-investigation.md](reports/docker-disk-usage-investigation.md) | 2026-03-03 | Docker disk space investigation: Three root causes identified and fixed - 32GB Rust build artifacts (anonymous volumes), 28GB build cache/orphaned volumes (cleanup), 3.9GB Anvil state accumulation (--prune-history flag). Total: 54GB freed. | docker, disk-usage, rust, build-artifacts, volumes, orderbook, anvil, tmpfs, prune-history, optimization |
 | [order-failure-analysis.md](reports/order-failure-analysis.md) | _(earlier)_ | Analysis of order failure patterns | orders, failures, analysis |
+| [anvil-event-sync-measurements.md](anvil-event-sync-measurements.md) | 2026-03-16 | Detailed measurements proving Anvil event sync issue: Database reports 0% fill rate while on-chain analysis shows 75% (6/8 orders filled). Includes SQL queries, blockchain queries, settlement transaction verification, and root cause evidence. Implemented chain reconciliation utility as workaround. | event-sync, anvil, metrics-accuracy, chain-reconciliation, debug_traceTransaction, fill-rate, Trade-events, settlement-verification |
 
 ---
 
@@ -188,6 +200,8 @@ Milestone completion validations and delivery comments.
 | File | Milestone | Summary |
 |------|-----------|---------|
 | [m2-validation-comments.md](m2-validation-comments.md) | M2 | Comments for Linear explaining implementation decisions and deviations |
+| [validation/m5-issue-17-integration-validation.md](validation/m5-issue-17-integration-validation.md) | M5 | Integration specialist report: Docker services, Prometheus metrics, E2E testing |
+| [validation/m5-issue-17-comprehensive-validation.md](validation/m5-issue-17-comprehensive-validation.md) | M5 | Comprehensive multi-agent validation: code quality, integrations, test coverage, action items |
 
 ---
 
@@ -305,25 +319,34 @@ Find documents by topic:
 | `aggregation` | COW-611 ticket, COW-611 plan |
 | `alerting` | COW-598 ticket |
 | `alertmanager` | COW-598 ticket |
-| `anvil` | docker-disk-usage-investigation report |
+| `anvil` | docker-disk-usage-investigation report, anvil-event-sync-measurements report, anvil-event-sync-issue ticket |
 | `API` | COW-610 ticket, COW-610 plan |
 | `baseline` | COW-588 ticket, COW-588 plan |
+| `chain-reconciliation` | anvil-event-sync-measurements report, anvil-event-sync-issue ticket |
 | `build-artifacts` | docker-disk-usage-investigation report |
 | `BaselineManager` | COW-588 plan |
 | `CLI` | 2026-01-26 plan |
 | `Cohen's-d` | COW-589 plan |
 | `comparison` | COW-589 ticket, COW-589 plan |
 | `ComparisonEngine` | COW-589 plan |
+| `code-quality` | M5-Issue-17 comprehensive validation |
 | `config-generator` | M4-Issue-15 architecture (Phase 7) |
 | `configuration-system` | M4-Issue-15 architecture |
+| `critical-fixes` | M5-Issue-17 action items |
 | `CSV` | COW-590 plan |
 | `dashboards` | COW-593 ticket |
 | `defaults` | M4-Issue-15 architecture |
 | `data-models` | COW-609 ticket, COW-609 plan |
+| `database-updates` | anvil-event-sync-issue ticket |
+| `debug_traceTransaction` | anvil-event-sync-measurements report, anvil-event-sync-issue ticket |
 | `disk-usage` | docker-disk-usage-investigation report |
 | `docker` | docker-disk-usage-investigation report |
 | `documentation` | COW-608 ticket |
+| `e2e-testing` | M5-Issue-17 ticket, M5-Issue-17 validation |
+| `event-sync` | anvil-event-sync-measurements report, anvil-event-sync-issue ticket |
 | `export` | COW-609 plan |
+| `fill-rate` | anvil-event-sync-measurements report, anvil-event-sync-issue ticket |
+| `healthchecks` | M5-Issue-17 action items |
 | `formatters` | COW-590 plan |
 | `git-info` | COW-588 plan |
 | `grafana` | COW-593 ticket |
@@ -332,14 +355,19 @@ Find documents by topic:
 | `inheritance` | M4-Issue-15 architecture |
 | `lifecycle` | COW-610 ticket, COW-610 plan |
 | `metrics` | COW-587 ticket, COW-609/610/611, COW-591 ticket |
-| `monitoring` | COW-591 ticket, COW-598 ticket |
+| `metrics-accuracy` | anvil-event-sync-measurements report, anvil-event-sync-issue ticket |
+| `metrics-discovery` | M5-Issue-17 ticket, M5-Issue-17 validation |
+| `monitoring` | COW-591 ticket, COW-598 ticket, M5-Issue-17 action items |
+| `multi-agent-validation` | M5-Issue-17 comprehensive validation |
 | `notifications` | COW-598 ticket |
 | `optimization` | docker-disk-usage-investigation report |
 | `orderbook` | docker-disk-usage-investigation report |
 | `p-value` | COW-589 plan |
+| `production-readiness` | M5-Issue-17 ticket, M5-Issue-17 validation |
 | `profiles` | M4-Issue-15 architecture |
 | `prune-history` | docker-disk-usage-investigation report |
-| `prometheus` | COW-591 ticket, COW-598 ticket |
+| `prometheus` | COW-591 ticket, COW-598 ticket, M5-Issue-17 action items |
+| `scenario-schema` | M5-Issue-17 action items |
 | `PrometheusExporter` | COW-591 ticket |
 | `Pydantic` | COW-609 plan |
 | `real-time` | COW-611 ticket, COW-611 plan |
@@ -351,6 +379,7 @@ Find documents by topic:
 | `scenario-documentation` | M4-Issue-15 architecture (Phase 8), user-guide, config-reference, best-practices |
 | `scenarios` | M4-Issue-14 plan, M4-Issue-15 architecture |
 | `serialization` | COW-588 plan |
+| `settlement-verification` | anvil-event-sync-measurements report, anvil-event-sync-issue ticket |
 | `statistics` | COW-589 plan |
 | `streaming` | COW-611 ticket, COW-611 plan |
 | `success-criteria` | M4-Issue-14 plan |
@@ -359,9 +388,11 @@ Find documents by topic:
 | `testing` | COW-587 validation plan |
 | `user-guide` | M4-Issue-15 architecture (Phase 8), docs/scenario-user-guide.md |
 | `wizard` | M4-Issue-15 architecture (Phase 7), cow-perf config-init |
+| `test-coverage` | M5-Issue-17 comprehensive validation |
 | `tmpfs` | docker-disk-usage-investigation report |
+| `Trade-events` | anvil-event-sync-measurements report, anvil-event-sync-issue ticket |
 | `Typer` | 2026-01-26 plan |
-| `validation` | COW-587 validation plan |
+| `validation` | COW-587 validation plan, M5-Issue-17 validation |
 | `visualization` | COW-593 ticket |
 | `volumes` | docker-disk-usage-investigation report |
 
@@ -369,7 +400,7 @@ Find documents by topic:
 
 ## Maintenance Notes
 
-**Last Updated**: 2026-03-11 (completed M4-Issue-15 Phases 6-8: templates, config generator, and documentation; added 3 new docs files)
+**Last Updated**: 2026-03-16 (completed M5-Issue-17 validation: multi-agent validation, comprehensive report, ticket, and action items; added M5 section; updated project status to M5 in progress)
 
 ### How to Update This Index
 1. When adding new files, add entries to the appropriate section

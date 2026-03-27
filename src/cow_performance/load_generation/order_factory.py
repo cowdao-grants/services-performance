@@ -224,6 +224,7 @@ class OrderFactory:
         sell_amount_wei = token_pair.sell_token.to_wei(sell_amount)
 
         # Get realistic quote with surplus if API client available
+        quote_id = None
         if self.api_client is not None:
             # Quote is required - if it fails, let the exception propagate
             # The caller should retry with different parameters (amount, token pair, etc.)
@@ -234,11 +235,18 @@ class OrderFactory:
                 from_address=trader_account.address,
                 kind=kind.value,
                 app_data=self.market_app_data_hash,  # Include appData for accurate quote
+                validity_seconds=self.valid_duration,  # Market orders: short validity (e.g., 120s)
             )
-            # Use quoted buy amount (includes surplus for solver profitability)
-            # Fee is already accounted for in the quote, so we set feeAmount to 0
-            buy_amount_wei = int(quote["quote"]["buyAmount"])
-            fee_amount_wei = 0  # CoW Protocol: fee is included in buyAmount via surplus
+            # Use values from quote (matches CoW Swap frontend behavior)
+            # The quote's sellAmount is AFTER fees are deducted
+            # Fee is implicit in the sellAmount, so feeAmount field must be 0
+            sell_amount_wei = int(quote["quote"]["sellAmount"])
+            # Apply 15% slippage to buy amount to ensure solver profitability
+            # This gives the solver room to profit after gas costs (~$5-10)
+            buy_amount_wei = int(int(quote["quote"]["buyAmount"]) * 0.85)
+            fee_amount_wei = 0  # Fee is implicit (sellAmountBeforeFee = sellAmount + fee)
+            market_valid_to = int(quote["quote"]["validTo"])
+            quote_id = quote["id"]  # Extract quote ID for market order classification
         else:
             # No API client - use approximate market rates (dry-run mode)
             fallback_rate = self._get_market_rate_fallback(
@@ -252,9 +260,8 @@ class OrderFactory:
                 price=fallback_rate,
             )
             fee_amount_wei = 0  # Use zero fee in dry-run mode
-
-        # Market orders have shorter expiration (2 minutes) for immediate execution
-        market_valid_to = int(time.time()) + self.valid_duration
+            # Market orders have shorter expiration (2 minutes) for immediate execution
+            market_valid_to = int(time.time()) + self.valid_duration
 
         # Create order parameters with market orderClass metadata
         params = OrderParameters(
@@ -275,8 +282,8 @@ class OrderFactory:
         # Validate order
         assert_valid_order(params)
 
-        # Sign order
-        return self._sign_order(params, trader_account)
+        # Sign order (include quote_id for market orders)
+        return self._sign_order(params, trader_account, quote_id=quote_id)
 
     async def create_limit_order(
         self,
@@ -315,6 +322,7 @@ class OrderFactory:
         sell_amount_wei = token_pair.sell_token.to_wei(sell_amount)
 
         # Get realistic quote with surplus if API client available
+        quote_id = None
         if self.api_client is not None:
             # Quote is required - if it fails, let the exception propagate
             # The caller should retry with different parameters (amount, token pair, etc.)
@@ -326,10 +334,16 @@ class OrderFactory:
                 kind=kind.value,
                 app_data=self.limit_app_data_hash,  # Include appData for accurate quote
             )
-            # Use quoted buy amount (includes surplus for solver profitability)
-            # Fee is already accounted for in the quote, so we set feeAmount to 0
-            buy_amount_wei = int(quote["quote"]["buyAmount"])
-            fee_amount_wei = 0  # CoW Protocol: fee is included in buyAmount via surplus
+            # Use values from quote (matches CoW Swap frontend behavior)
+            # The quote's sellAmount is AFTER fees are deducted
+            # Fee is implicit in the sellAmount, so feeAmount field must be 0
+            sell_amount_wei = int(quote["quote"]["sellAmount"])
+            # Apply 15% slippage to buy amount to ensure solver profitability
+            # This gives the solver room to profit after gas costs (~$5-10)
+            buy_amount_wei = int(int(quote["quote"]["buyAmount"]) * 0.85)
+            fee_amount_wei = 0  # Fee is implicit (sellAmountBeforeFee = sellAmount + fee)
+            valid_to = int(quote["quote"]["validTo"])
+            quote_id = quote["id"]  # Extract quote ID
         else:
             # No API client - use approximate market rates (dry-run mode)
             if limit_price is None:
@@ -347,9 +361,9 @@ class OrderFactory:
                 price=limit_price,
             )
             fee_amount_wei = 0  # Use zero fee in dry-run mode
-
-        # Limit orders use configured valid_duration (default 300s = 5 minutes)
-        # In production, this would typically be hours to days
+            # Limit orders use configured valid_duration (default 300s = 5 minutes)
+            # In production, this would typically be hours to days
+            valid_to = self._get_valid_to_timestamp()
 
         # Create order parameters with limit orderClass metadata
         params = OrderParameters(
@@ -357,7 +371,7 @@ class OrderFactory:
             buyToken=token_pair.buy_token.address,
             sellAmount=str(sell_amount_wei),
             buyAmount=str(buy_amount_wei),
-            validTo=self._get_valid_to_timestamp(),  # Uses self.valid_duration
+            validTo=valid_to,
             appData=self.limit_app_data_hash,  # Use limit-specific appData
             feeAmount=str(fee_amount_wei),
             kind=kind,
@@ -370,13 +384,14 @@ class OrderFactory:
         # Validate order
         assert_valid_order(params)
 
-        # Sign order
-        return self._sign_order(params, trader_account)
+        # Sign order (include quote_id if available)
+        return self._sign_order(params, trader_account, quote_id=quote_id)
 
     def _sign_order(
         self,
         params: OrderParameters,
         trader_account: LocalAccount,
+        quote_id: int | None = None,
     ) -> SignedOrder:
         """
         Sign an order using EIP-712.
@@ -384,6 +399,7 @@ class OrderFactory:
         Args:
             params: Order parameters to sign
             trader_account: Account to sign with
+            quote_id: Optional quote ID for market orders (enables proper classification)
 
         Returns:
             Signed order
@@ -453,6 +469,7 @@ class OrderFactory:
             from_=trader_account.address,
             signingScheme=SigningScheme.EIP712,
             signature="0x" + signed_message.signature.hex(),
+            quoteId=quote_id,  # Include quote ID for market order classification
         )
 
         return signed_order
