@@ -1,66 +1,12 @@
 # Thoughts Directory Index
 
-> **For AI Agents**: Start here to find relevant documentation without reprocessing existing work.
+> **For AI Agents**: This directory contains minimal documentation for ongoing and future work.
 
-## Quick Reference
+## Overview
 
-| Task | Start Here |
-|------|------------|
-| Understand project scope | [grant-proposal.md](context/grant-proposal.md) |
-| Find a ticket's details | [tickets/](#tickets) |
-| Find implementation approach | [plans/](#implementation-plans) |
-| Check what's been researched | [research/](#research) |
-| Review investigation reports | [reports/](#reports) |
-| Find reusable prompts | [prompts/](#prompts) |
-| Review code audits | [audits/](#audits) |
+The thoughts/ directory has been cleaned up to remove completed work. All implemented features (M1-M5) are now documented in the main `/docs` directory and the codebase itself.
 
-**Note:** `thoughts/private/` holds internal-only material (design decisions, testing guides, validations, etc.). It is in `.gitignore` and is **not committed**; this index does not list its contents in detail.
-
-## Current Project Status
-
-**Completed Milestones**: M2 (Performance Benchmarking), M4 (Scenario System & Configuration)
-**Active Work**: M5 (Final Validation & Production Readiness) - M5-Issue-17
-**Next Milestone**: Production Deployment (pending critical fixes)
-
-> **For M3 developers**: Each completed M2 ticket (COW-588, COW-589, COW-590) includes an "Implementation Notes" section at the bottom documenting architectural decisions and deviations from the original scope. Review these before starting M3 to understand what was built vs. what was deferred.
-
-### M2 - Performance Benchmarking (COMPLETE)
-
-| Ticket | Status | Description |
-|--------|--------|-------------|
-| COW-587 | ✅ Done | Metrics Collection Framework (parent) |
-| COW-609 | ✅ Done | Data Models & Storage |
-| COW-610 | ✅ Done | Collection Lifecycle & API Monitoring |
-| COW-611 | ✅ Done | Analysis & Aggregation |
-| COW-588 | ✅ Done | Baseline Snapshot System |
-| COW-589 | ✅ Done | Comparison Engine & Regression Detection |
-| COW-590 | ✅ Done | Automated Reporting |
-| COW-608 | ✅ Done | README Restructuring |
-
-### M4 - Scenario System & Configuration (COMPLETE)
-
-| Ticket | Status | Description |
-|--------|--------|-------------|
-| M4-Issue-14 | ✅ Done | Predefined Test Scenarios Library |
-| M4-Issue-15 | ✅ Done | Enhanced Configuration Architecture |
-
-**Completion**: Configuration system with templates, interactive wizard (`cow-perf config-init`), and comprehensive documentation (user guide, configuration reference, best practices).
-
-### M5 - Final Validation & Production Readiness (IN PROGRESS)
-
-| Ticket | Status | Description |
-|--------|--------|-------------|
-| M5-Issue-17 | ⚠️ In Progress | End-to-End Validation and Missing Metrics Discovery |
-
-**Current Status**: Validation complete, 3 critical fixes required before production deployment.
-
-### M3 - Metrics & Visualization (QUEUED)
-
-| Ticket | Status | Description |
-|--------|--------|-------------|
-| COW-591 | 🔲 Todo | Prometheus Exporters |
-| COW-593 | 🔲 Todo | Grafana Dashboards |
-| COW-598 | 🔲 Todo | Alerting Rules |
+**Current Project Status**: All core milestones (M1-M5) completed. Monitoring stack (Prometheus + Grafana) implemented. Only alerting rules (COW-598) remain as optional future work.
 
 ---
 
@@ -68,349 +14,145 @@
 
 ```
 thoughts/
-├── INDEX.md           # ← You are here
-├── analysis/          # Deep-dive analysis documents
-├── audits/            # Code quality and production readiness audits
-├── bugfixes/          # Bug investigation and fix documentation
-├── context/           # Project background, grants, scope
-├── plans/             # Implementation plans for tickets
-├── private/           # Internal-only (not committed; contents not listed here)
-├── prompts/           # Reusable agent prompts
-├── reports/           # Investigation reports and analysis
-├── research/          # Research and investigation documents
-└── tickets/           # Local copies of Linear tickets
+├── INDEX.md              # ← You are here
+├── context/              # Project background
+│   └── grant-proposal.md # Project scope and milestones
+├── tickets/              # Future work and technical debt
+│   ├── anvil-event-sync-issue.md
+│   └── COW-598-alerting-rules.md
+└── plans/                # Future implementation plans
+    └── 2026-02-13-cow-598-alerting-rules.md
 ```
 
 ---
 
-## Tickets
+## Current Contents
 
-Local copies of Linear tickets. **These are the source of truth** - do not update Linear directly unless explicitly asked.
+### Context
 
-| File | ID | Status | Milestone | Notes | Keywords |
-|------|----|--------|-----------|-------|----------|
-| [COW-587-metrics-collection-framework.md](tickets/COW-587-metrics-collection-framework.md) | COW-587 | ✅ Done | M2 | | metrics, collection, parent-ticket |
-| [COW-588-baseline-snapshot-system.md](tickets/COW-588-baseline-snapshot-system.md) | COW-588 | ✅ Done | M2 | 📝 | baseline, snapshots, comparison |
-| [COW-589-comparison-engine-regression-detection.md](tickets/COW-589-comparison-engine-regression-detection.md) | COW-589 | ✅ Done | M2 | 📝 | comparison, regression, statistics |
-| [COW-590-automated-reporting.md](tickets/COW-590-automated-reporting.md) | COW-590 | ✅ Done | M2 | 📝 | reporting, formatters, CSV, recommendations |
-| [COW-591-prometheus-exporters.md](tickets/COW-591-prometheus-exporters.md) | COW-591 | 🔲 Todo | M3 | | prometheus, metrics, exporters, monitoring |
-| [COW-593-grafana-dashboards.md](tickets/COW-593-grafana-dashboards.md) | COW-593 | 🔲 Todo | M3 | | grafana, dashboards, visualization |
-| [COW-598-alerting-rules.md](tickets/COW-598-alerting-rules.md) | COW-598 | 🔲 Todo | M3 | | alerting, prometheus, notifications |
-
-> 📝 = Has "Implementation Notes" section with architectural decisions and deviations
-| [COW-608-readme-restructuring.md](tickets/COW-608-readme-restructuring.md) | COW-608 | ✅ Done | - | | documentation, README |
-| [COW-609-foundation-data-models-storage.md](tickets/COW-609-foundation-data-models-storage.md) | COW-609 | ✅ Done | M2 | | data-models, MetricsStore, export |
-| [COW-610-collection-lifecycle-api-monitoring.md](tickets/COW-610-collection-lifecycle-api-monitoring.md) | COW-610 | ✅ Done | M2 | | lifecycle, API, resource-monitoring |
-| [COW-611-analysis-aggregation-realtime.md](tickets/COW-611-analysis-aggregation-realtime.md) | COW-611 | ✅ Done | M2 | | aggregation, percentiles, streaming |
-| [m5-issue-17-e2e-validation.md](tickets/m5-issue-17-e2e-validation.md) | M5-Issue-17 | ⚠️ In Progress | M5 | 📝 | validation, e2e-testing, metrics-discovery, production-readiness |
-| [anvil-event-sync-issue.md](tickets/anvil-event-sync-issue.md) | - | ✅ Resolved | - | 🐛 | event-sync, anvil, metrics-accuracy, chain-reconciliation, debug_traceTransaction, database-updates |
-
-### Ticket Hierarchy
-
-```
-COW-587 (Metrics Collection Framework) ─ PARENT
-├── COW-609 (Data Models & Storage)
-├── COW-610 (Collection Lifecycle & API)
-└── COW-611 (Analysis & Aggregation)
-
-COW-588 (Baseline Snapshot System)
-└── Depends on: COW-587
-└── Blocks: COW-589
-
-COW-589 (Comparison Engine & Regression Detection)
-├── Depends on: COW-587, COW-588
-└── Blocks: COW-590
-
-COW-590 (Automated Reporting)
-└── Depends on: COW-587, COW-588, COW-589 (optional)
-
-COW-608 (README Restructuring) ─ Standalone
-
-COW-591 (Prometheus Exporters)
-├── Depends on: COW-587
-└── Blocks: COW-593
-
-COW-593 (Grafana Dashboards)
-├── Depends on: COW-591
-└── Blocks: COW-598
-
-COW-598 (Alerting Rules)
-└── Depends on: COW-591, COW-593
-```
-
----
-
-## Implementation Plans
-
-Detailed implementation approaches for tickets. Read these before implementing to avoid duplicating work.
-
-| File | Related Ticket | Status | Keywords |
-|------|----------------|--------|----------|
-| [2026-01-26-cli-tool-interface.md](plans/2026-01-26-cli-tool-interface.md) | M1-Issue-05 | ✅ Complete | CLI, Typer, commands, configuration |
-| [2026-01-28-cow-587-validation-plan.md](plans/2026-01-28-cow-587-validation-plan.md) | COW-587 | ✅ Complete | validation, testing, component-status |
-| [2026-01-28-cow-609-foundation-data-models-storage.md](plans/2026-01-28-cow-609-foundation-data-models-storage.md) | COW-609 | ✅ Complete | Pydantic, MetricsStore, OrderMetadata, JSON-export |
-| [2026-01-28-cow-610-collection-lifecycle-api-monitoring.md](plans/2026-01-28-cow-610-collection-lifecycle-api-monitoring.md) | COW-610 | ✅ Complete | order-tracking, API-instrumentation, resource-monitoring |
-| [2026-01-29-cow-611-analysis-aggregation-realtime.md](plans/2026-01-29-cow-611-analysis-aggregation-realtime.md) | COW-611 | ✅ Complete | MetricsAggregator, percentiles, real-time, CLI |
-| [2026-02-02-cow-588-baseline-snapshot-system.md](plans/2026-02-02-cow-588-baseline-snapshot-system.md) | COW-588 | ✅ Complete | BaselineManager, git-info, UUID-index, serialization |
-| [2026-02-03-cow-589-comparison-engine.md](plans/2026-02-03-cow-589-comparison-engine.md) | COW-589 | ✅ Complete | ComparisonEngine, regression, statistics, p-value, Cohen's-d |
-| [2026-02-03-cow-590-automated-reporting.md](plans/2026-02-03-cow-590-automated-reporting.md) | COW-590 | ✅ Complete | ReportGenerator, formatters, CSV, recommendations, CLI |
-| [2026-02-13-cow-598-alerting-rules.md](plans/2026-02-13-cow-598-alerting-rules.md) | COW-598 | 🔲 Ready | Prometheus alerts, alerting rules, thresholds, Grafana annotations |
-| [m4-issue-14-predefined-scenarios-plan.md](plans/m4-issue-14-predefined-scenarios-plan.md) | M4-Issue-14 | 👀 In Review | scenarios, tags, metadata, success-criteria, CI/CD, documentation |
-| [2026-03-10-m4-issue-15-configuration-architecture.md](plans/2026-03-10-m4-issue-15-configuration-architecture.md) | M4-Issue-15 | ✅ Complete | configuration-system, inheritance, templates, profiles, defaults, validation, config-generator, wizard |
-| [m5-issue-17-action-items.md](plans/m5-issue-17-action-items.md) | M5-Issue-17 | 🔧 Ready | critical-fixes, scenario-schema, prometheus, e2e-tests, healthchecks, monitoring |
-
----
-
-## Research
-
-Investigation and analysis documents created before implementation.
-
-| File | Related Ticket | Keywords |
-|------|----------------|----------|
-| _(none currently)_ | — | — |
-
----
-
-## Reports
-
-Investigation reports and analysis of production issues, performance problems, and system behavior.
-
-| File | Date | Summary | Keywords |
-|------|------|---------|----------|
-| [docker-disk-usage-investigation.md](reports/docker-disk-usage-investigation.md) | 2026-03-03 | Docker disk space investigation: Three root causes identified and fixed - 32GB Rust build artifacts (anonymous volumes), 28GB build cache/orphaned volumes (cleanup), 3.9GB Anvil state accumulation (--prune-history flag). Total: 54GB freed. | docker, disk-usage, rust, build-artifacts, volumes, orderbook, anvil, tmpfs, prune-history, optimization |
-| [order-failure-analysis.md](reports/order-failure-analysis.md) | _(earlier)_ | Analysis of order failure patterns | orders, failures, analysis |
-| [anvil-event-sync-measurements.md](anvil-event-sync-measurements.md) | 2026-03-16 | Detailed measurements proving Anvil event sync issue: Database reports 0% fill rate while on-chain analysis shows 75% (6/8 orders filled). Includes SQL queries, blockchain queries, settlement transaction verification, and root cause evidence. Implemented chain reconciliation utility as workaround. | event-sync, anvil, metrics-accuracy, chain-reconciliation, debug_traceTransaction, fill-rate, Trade-events, settlement-verification |
-
----
-
-## Prompts
-
-Reusable agent prompts for specific tasks. Use these instead of writing new prompts for similar tasks.
-
-| File | Purpose | Target Area |
-|------|---------|-------------|
-| [m3-planning-agent.md](prompts/m3-planning-agent.md) | M3 planning & validation (claude-code): refine tasks, grant alignment, produce M3 validation doc | M3 (COW-591, COW-593, COW-598) |
-
----
-
-## Validations
-
-Milestone completion validations and delivery comments.
-
-| File | Milestone | Summary |
-|------|-----------|---------|
-| [m2-validation-comments.md](m2-validation-comments.md) | M2 | Comments for Linear explaining implementation decisions and deviations |
-| [validation/m5-issue-17-integration-validation.md](validation/m5-issue-17-integration-validation.md) | M5 | Integration specialist report: Docker services, Prometheus metrics, E2E testing |
-| [validation/m5-issue-17-comprehensive-validation.md](validation/m5-issue-17-comprehensive-validation.md) | M5 | Comprehensive multi-agent validation: code quality, integrations, test coverage, action items |
-
----
-
-## Audits
-
-Code quality audits and their findings.
-
-| File | Date | Summary |
-|------|------|---------|
-| _(none currently)_ | — | — |
-
----
-
-## Context
-
-Background documents providing project context.
+Project background and scope documentation.
 
 | File | Purpose |
 |------|---------|
-| [grant-proposal.md](context/grant-proposal.md) | Project scope, milestones (M1-M4), budget (21,000 xDAI), success criteria |
+| [grant-proposal.md](context/grant-proposal.md) | Project scope, milestones (M1-M5), budget, success criteria |
+
+### Tickets
+
+Outstanding tickets and technical debt documentation.
+
+| File | Status | Description |
+|------|--------|-------------|
+| [anvil-event-sync-issue.md](tickets/anvil-event-sync-issue.md) | ✅ Resolved (Documented) | Anvil fork mode event sync limitations and chain reconciliation solution |
+| [COW-598-alerting-rules.md](tickets/COW-598-alerting-rules.md) | 🔲 Optional Future Work | Prometheus alerting rules (not critical for core functionality) |
+
+### Plans
+
+Implementation plans for future work.
+
+| File | Related Ticket | Status |
+|------|----------------|--------|
+| [2026-02-13-cow-598-alerting-rules.md](plans/2026-02-13-cow-598-alerting-rules.md) | COW-598 | 🔲 Ready (if needed) |
 
 ---
 
-## Document Clusters
+## Completed Work
 
-Related documents grouped by feature/topic:
+All completed milestones have been removed from this directory. Documentation for implemented features can be found in:
 
-### Metrics Collection (COW-587)
-```
-tickets/COW-587-metrics-collection-framework.md  (Parent ticket)
-├── tickets/COW-609-foundation-data-models-storage.md
-│   └── plans/2026-01-28-cow-609-foundation-data-models-storage.md
-├── tickets/COW-610-collection-lifecycle-api-monitoring.md
-│   └── plans/2026-01-28-cow-610-collection-lifecycle-api-monitoring.md
-├── tickets/COW-611-analysis-aggregation-realtime.md
-│   └── plans/2026-01-29-cow-611-analysis-aggregation-realtime.md
-└── plans/2026-01-28-cow-587-validation-plan.md
-```
+### Main Documentation (`/docs`)
 
-### Baseline Snapshot System (COW-588)
-```
-tickets/COW-588-baseline-snapshot-system.md
-└── plans/2026-02-02-cow-588-baseline-snapshot-system.md
-```
+- **Getting Started**: `docs/scenario-user-guide.md`, `docs/workflows.md`
+- **CLI Reference**: `docs/cli.md`
+- **Configuration**: `docs/configuration-reference.md`, `docs/scenario-best-practices.md`
+- **Reports & Baselines**: `docs/reports.md`
+- **Operations**: `docs/operations.md`
+- **Architecture**: `docs/architecture.md`
+- **Features**: `docs/wallet-funding.md`, `docs/trading-patterns.md`, `docs/metrics.md`, `docs/benchmarking.md`
+- **API Documentation**: `docs/order-generation.md`, `docs/conditional-orders.md`, `docs/user-simulation.md`
+- **Reference**: `docs/troubleshooting.md`, `docs/faq.md`
 
-### Comparison Engine (COW-589)
-```
-tickets/COW-589-comparison-engine-regression-detection.md
-└── plans/2026-02-03-cow-589-comparison-engine.md
-```
+### Completed Milestones
 
-### Automated Reporting (COW-590)
-```
-tickets/COW-590-automated-reporting.md
-└── plans/2026-02-03-cow-590-automated-reporting.md
-```
+**M1 - Project Setup & Load Generation Framework**
+- ✅ CLI tool interface
+- ✅ Load generation
+- ✅ Order submission strategies
 
-### Documentation (COW-608)
-```
-tickets/COW-608-readme-restructuring.md
-```
+**M2 - Performance Benchmarking**
+- ✅ COW-609: Data models & storage (MetricsStore, OrderMetadata)
+- ✅ COW-610: Lifecycle tracking & API monitoring
+- ✅ COW-611: Analysis & aggregation
+- ✅ COW-588: Baseline snapshot system
+- ✅ COW-589: Comparison engine & regression detection
+- ✅ COW-590: Automated reporting
 
-### Prometheus Exporters (COW-591) — M3
-```
-tickets/COW-591-prometheus-exporters.md
-```
+**M3 - Metrics & Visualization**
+- ✅ COW-591: Prometheus exporters (real-time metrics on port 9091)
+- ✅ COW-593: Grafana dashboards (Performance Overview, Reconciliation)
+- 🔲 COW-598: Alerting rules (optional, not implemented)
 
-### Grafana Dashboards (COW-593) — M3
-```
-tickets/COW-593-grafana-dashboards.md
-```
+**M4 - Scenario System & Configuration**
+- ✅ M4-Issue-14: Predefined scenarios library (5 production scenarios)
+- ✅ M4-Issue-15: Enhanced configuration architecture (templates, wizard, inheritance)
 
-### Alerting Rules (COW-598) — M3
-```
-tickets/COW-598-alerting-rules.md
-└── plans/2026-02-13-cow-598-alerting-rules.md  (execution plan)
-```
+**M5 - Final Validation & Production Readiness**
+- ✅ M5-Issue-17: E2E validation and metrics discovery
+- ✅ Chain reconciliation implementation
+- ✅ Docker disk management optimizations
+- ✅ Documentation cleanup and updates
 
-### Predefined Test Scenarios (M4-Issue-14) — M4
-```
-plans/m4-issue-14-predefined-scenarios-plan.md
-└── Implementation:
-    ├── configs/scenarios/enhanced/*.yml  (5 production scenarios)
-    ├── src/cow_performance/scenarios/validation.py  (SuccessCriteriaValidator)
-    └── docs/scenarios/*.md  (individual scenario documentation)
-```
-
-### Configuration Architecture (M4-Issue-15) — M4
-```
-plans/2026-03-10-m4-issue-15-configuration-architecture.md
-└── Implementation (Phases 1-8):
-    ├── Phase 1-5: Enhanced validation, defaults, inheritance, profiles, CLI
-    ├── Phase 6: Templates
-    │   ├── configs/templates/*.template.yml  (3 built-in templates)
-    │   ├── src/cow_performance/scenarios/templates.py  (TemplateExpander)
-    │   └── examples/scenarios/*.yml  (4 template examples)
-    ├── Phase 7: Configuration Generator
-    │   ├── src/cow_performance/scenarios/generator.py  (ConfigGenerator)
-    │   ├── CLI: cow-perf config-init  (interactive wizard)
-    │   └── tests/unit/test_generator.py  (20 tests)
-    └── Phase 8: Documentation
-        ├── docs/scenario-user-guide.md  (step-by-step tutorial)
-        ├── docs/configuration-reference.md  (complete field reference)
-        └── docs/scenario-best-practices.md  (guidelines and patterns)
-```
+**Additional**
+- ✅ COW-608: README restructuring
+- ✅ Documentation update (2026-03-23): Added 3 new docs (troubleshooting.md, workflows.md, faq.md), expanded trading-patterns.md (+3 patterns), enhanced metrics.md and configuration-reference.md
 
 ---
 
-## Keyword Index
+## Quick Reference
 
-Find documents by topic:
-
-| Keyword | Documents |
-|---------|-----------|
-| `aggregation` | COW-611 ticket, COW-611 plan |
-| `alerting` | COW-598 ticket |
-| `alertmanager` | COW-598 ticket |
-| `anvil` | docker-disk-usage-investigation report, anvil-event-sync-measurements report, anvil-event-sync-issue ticket |
-| `API` | COW-610 ticket, COW-610 plan |
-| `baseline` | COW-588 ticket, COW-588 plan |
-| `chain-reconciliation` | anvil-event-sync-measurements report, anvil-event-sync-issue ticket |
-| `build-artifacts` | docker-disk-usage-investigation report |
-| `BaselineManager` | COW-588 plan |
-| `CLI` | 2026-01-26 plan |
-| `Cohen's-d` | COW-589 plan |
-| `comparison` | COW-589 ticket, COW-589 plan |
-| `ComparisonEngine` | COW-589 plan |
-| `code-quality` | M5-Issue-17 comprehensive validation |
-| `config-generator` | M4-Issue-15 architecture (Phase 7) |
-| `configuration-system` | M4-Issue-15 architecture |
-| `critical-fixes` | M5-Issue-17 action items |
-| `CSV` | COW-590 plan |
-| `dashboards` | COW-593 ticket |
-| `defaults` | M4-Issue-15 architecture |
-| `data-models` | COW-609 ticket, COW-609 plan |
-| `database-updates` | anvil-event-sync-issue ticket |
-| `debug_traceTransaction` | anvil-event-sync-measurements report, anvil-event-sync-issue ticket |
-| `disk-usage` | docker-disk-usage-investigation report |
-| `docker` | docker-disk-usage-investigation report |
-| `documentation` | COW-608 ticket |
-| `e2e-testing` | M5-Issue-17 ticket, M5-Issue-17 validation |
-| `event-sync` | anvil-event-sync-measurements report, anvil-event-sync-issue ticket |
-| `export` | COW-609 plan |
-| `fill-rate` | anvil-event-sync-measurements report, anvil-event-sync-issue ticket |
-| `healthchecks` | M5-Issue-17 action items |
-| `formatters` | COW-590 plan |
-| `git-info` | COW-588 plan |
-| `grafana` | COW-593 ticket |
-| `heatmaps` | COW-593 ticket |
-| `histograms` | COW-591 ticket |
-| `inheritance` | M4-Issue-15 architecture |
-| `lifecycle` | COW-610 ticket, COW-610 plan |
-| `metrics` | COW-587 ticket, COW-609/610/611, COW-591 ticket |
-| `metrics-accuracy` | anvil-event-sync-measurements report, anvil-event-sync-issue ticket |
-| `metrics-discovery` | M5-Issue-17 ticket, M5-Issue-17 validation |
-| `monitoring` | COW-591 ticket, COW-598 ticket, M5-Issue-17 action items |
-| `multi-agent-validation` | M5-Issue-17 comprehensive validation |
-| `notifications` | COW-598 ticket |
-| `optimization` | docker-disk-usage-investigation report |
-| `orderbook` | docker-disk-usage-investigation report |
-| `p-value` | COW-589 plan |
-| `production-readiness` | M5-Issue-17 ticket, M5-Issue-17 validation |
-| `profiles` | M4-Issue-15 architecture |
-| `prune-history` | docker-disk-usage-investigation report |
-| `prometheus` | COW-591 ticket, COW-598 ticket, M5-Issue-17 action items |
-| `scenario-schema` | M5-Issue-17 action items |
-| `PrometheusExporter` | COW-591 ticket |
-| `Pydantic` | COW-609 plan |
-| `real-time` | COW-611 ticket, COW-611 plan |
-| `recommendations` | COW-590 plan |
-| `regression` | COW-589 ticket, COW-589 plan |
-| `ReportGenerator` | COW-590 plan |
-| `reporting` | COW-590 ticket, COW-590 plan |
-| `rust` | docker-disk-usage-investigation report |
-| `scenario-documentation` | M4-Issue-15 architecture (Phase 8), user-guide, config-reference, best-practices |
-| `scenarios` | M4-Issue-14 plan, M4-Issue-15 architecture |
-| `serialization` | COW-588 plan |
-| `settlement-verification` | anvil-event-sync-measurements report, anvil-event-sync-issue ticket |
-| `statistics` | COW-589 plan |
-| `streaming` | COW-611 ticket, COW-611 plan |
-| `success-criteria` | M4-Issue-14 plan |
-| `TDD` | COW-587 validation plan |
-| `templates` | M4-Issue-15 architecture (Phase 6) |
-| `testing` | COW-587 validation plan |
-| `user-guide` | M4-Issue-15 architecture (Phase 8), docs/scenario-user-guide.md |
-| `wizard` | M4-Issue-15 architecture (Phase 7), cow-perf config-init |
-| `test-coverage` | M5-Issue-17 comprehensive validation |
-| `tmpfs` | docker-disk-usage-investigation report |
-| `Trade-events` | anvil-event-sync-measurements report, anvil-event-sync-issue ticket |
-| `Typer` | 2026-01-26 plan |
-| `validation` | COW-587 validation plan, M5-Issue-17 validation |
-| `visualization` | COW-593 ticket |
-| `volumes` | docker-disk-usage-investigation report |
+| Need | Location |
+|------|----------|
+| Project scope and milestones | [grant-proposal.md](context/grant-proposal.md) |
+| Technical debt documentation | [anvil-event-sync-issue.md](tickets/anvil-event-sync-issue.md) |
+| Optional future work | [COW-598-alerting-rules.md](tickets/COW-598-alerting-rules.md) |
+| All feature documentation | `/docs` directory in project root |
+| Implementation details | Codebase in `/src/cow_performance` |
 
 ---
 
 ## Maintenance Notes
 
-**Last Updated**: 2026-03-16 (completed M5-Issue-17 validation: multi-agent validation, comprehensive report, ticket, and action items; added M5 section; updated project status to M5 in progress)
+**Last Cleanup**: 2026-03-23
+- Removed all completed milestone documentation (M1-M5)
+- Removed completed implementation plans (16 files)
+- Removed validation documents (6 files)
+- Removed investigation reports (3 files)
+- Removed tasks and analysis documents (4 files)
+- **Reduced from 45 files to 5 files**
 
-### How to Update This Index
-1. When adding new files, add entries to the appropriate section
-2. Update the "Current Project Status" table when ticket statuses change
-3. Add new keywords to the Keyword Index
-4. Update Document Clusters when creating related documents
+### What Was Removed
 
-### Naming Conventions
-- **Tickets**: `{TICKET-ID}-{short-description}.md`
-- **Plans**: `YYYY-MM-DD-{ticket-id}-{description}.md`
-- **Research**: `{topic}-research.md`
-- **Audits**: `{audit-type}-YYYY-MM-DD.md`
-- **Prompts**: `{task-description}.md`
+All completed work has been removed since it's now documented in:
+1. **Main codebase** (`/src/cow_performance`)
+2. **Official documentation** (`/docs`)
+3. **README.md** (streamlined user guide)
+4. **Git history** (implementation records)
+
+### What Remains
+
+Only essential items kept:
+1. **grant-proposal.md** - Project context and scope
+2. **anvil-event-sync-issue.md** - Technical debt documentation (resolved but good reference)
+3. **COW-598 files** - Optional future work (alerting rules)
+
+---
+
+## For Future Work
+
+If you need to add new documentation:
+
+1. **Active development**: Add to appropriate section above
+2. **Completed work**: Document in `/docs` directory, remove from thoughts/
+3. **Technical debt**: Add to `tickets/` with clear status
+4. **Implementation plans**: Add to `plans/` before implementing
+
+**Keep this directory minimal** - completed work should be in `/docs` or the codebase, not here.

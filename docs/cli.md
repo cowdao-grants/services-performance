@@ -14,7 +14,7 @@ cow-perf version
 cow-perf scenarios
 
 # Run a performance test
-cow-perf run --config configs/scenarios/test-funded-scenario.yml
+cow-perf run --config configs/scenarios/predefined/quick-test.yml
 ```
 
 ## Global Options
@@ -180,7 +180,28 @@ cow-perf scenarios
 
 # List scenarios in custom directory
 cow-perf scenarios --dir ./scenarios
+
+# Filter by tag (must match ALL tags specified)
+cow-perf scenarios --tag production --tag smoke-test
+
+# Search by name or description
+cow-perf scenarios --search "high frequency"
+
+# Simple view without metadata
+cow-perf scenarios --simple
+
+# List available scenario templates
+cow-perf scenarios --list-templates
 ```
+
+**Available Options:**
+- `--dir` - Scenarios directory (default: ~/.cow-perf/scenarios)
+- `--tag/-t` - Filter by tag (can specify multiple, must match ALL)
+- `--search/-s` - Filter by name or description
+- `--simple` - Show simple view without metadata
+- `--list-templates` - List available scenario templates
+- `--validate` - Validate a scenario file
+- `--create-template` - Create a scenario template file
 
 ### Create Scenario Template
 
@@ -284,63 +305,22 @@ See [Configuration Reference: Trading Patterns](configuration-reference.md#tradi
 
 Baselines allow you to save performance test results and compare future runs for regression detection.
 
-### List Baselines
+**For complete baseline management documentation**, see [Reports & Baselines Guide](reports.md#managing-baselines).
+
+**Quick reference:**
 
 ```bash
-# List all baselines in default directory
-cow-perf baselines
+# Save baseline during test run
+cow-perf run --config scenario.yml --save-baseline v1.0
 
-# List baselines in custom directory
-cow-perf baselines --dir ./baselines
+# List all baselines
+cow-perf baselines --list
 
-# Output shows baseline names, dates, and key metrics
-```
-
-### Save Baseline
-
-Create a new baseline from test results:
-
-```bash
-# Save baseline with name and results file
-cow-perf baselines --save v1.0:./results.json
-
-# Save to custom directory
-cow-perf baselines --save v1.0:./results.json --dir ./baselines
-
-# Baseline naming convention: <version>:<results-file-path>
-# Examples: v1.0:results.json, release-2.0:./output.json, baseline-2024-01:data.json
-```
-
-### Show Baseline Details
-
-Display detailed information about a baseline:
-
-```bash
 # Show baseline details
 cow-perf baselines --show v1.0
 
-# Show from custom directory
-cow-perf baselines --show v1.0 --dir ./baselines
-
-# Output includes:
-# - Baseline name and creation date
-# - Orchestration config (traders, duration)
-# - Order statistics (total, by type)
-# - Performance metrics (orders/sec, latency)
-```
-
-### Delete Baseline
-
-Remove a baseline:
-
-```bash
 # Delete baseline
 cow-perf baselines --delete v1.0
-
-# Delete from custom directory
-cow-perf baselines --delete v1.0 --dir ./baselines
-
-# Confirmation prompt shown before deletion
 ```
 
 ---
@@ -366,19 +346,35 @@ cow-perf run --scenario medium-load --baseline v1.0
 cow-perf run --config ./config.yml --scenario light-load
 ```
 
+### Available Run Options
+
+- `--config/-c` - Configuration file path
+- `--scenario/-s` - Scenario name or file path
+- `--traders/-t` - Number of concurrent traders
+- `--duration/-d` - Test duration in seconds
+- `--settlement-wait/-w` - Settlement wait time in seconds (default: 300)
+- `--baseline/-B` - Baseline to compare against
+- `--save-baseline/-b` - Save results as baseline with given name
+- `--baseline-description` - Description for saved baseline
+- `--baseline-tags` - Comma-separated tags for baseline (e.g. "production,v1.0")
+- `--prometheus-port` - Port for Prometheus metrics exporter (default: 9091, 0 to disable)
+- `--output-format` - Output format: json, table, csv, prometheus
+- `--save-results` - Save results to file
+- `--verbose/-v` - Enable verbose logging
+
 ### Real-Time Metrics Export
 
 Prometheus metrics export is **enabled by default** on port 9091. During test execution, metrics are exposed at `http://localhost:9091/metrics` for Prometheus scraping.
 
 ```bash
 # Run with default Prometheus export (port 9091)
-cow-perf run --config configs/scenarios/light-load.yml
+cow-perf run --config configs/scenarios/predefined/light-load.yml
 
 # Use a different port
-cow-perf run --config configs/scenarios/light-load.yml --prometheus-port 9092
+cow-perf run --config configs/scenarios/predefined/light-load.yml --prometheus-port 9092
 
 # Disable Prometheus export
-cow-perf run --config configs/scenarios/light-load.yml --prometheus-port 0
+cow-perf run --config configs/scenarios/predefined/light-load.yml --prometheus-port 0
 ```
 
 **Using with Docker monitoring stack:**
@@ -388,7 +384,7 @@ cow-perf run --config configs/scenarios/light-load.yml --prometheus-port 0
 docker compose --profile monitoring up -d
 
 # Run test (metrics automatically available to Prometheus)
-cow-perf run --config configs/scenarios/light-load.yml
+cow-perf run --config configs/scenarios/predefined/light-load.yml
 
 # View dashboards at http://localhost:3000
 ```
@@ -625,68 +621,61 @@ Increase Docker memory limit to at least 8GB:
 
 Generate performance reports from saved baselines with comprehensive metrics analysis.
 
-### Generate Report
+**For complete report generation documentation**, see [Reports & Baselines Guide](reports.md#generating-reports).
 
-Generate a performance report from a saved baseline:
-
-```bash
-cow-perf report generate <baseline-name> [OPTIONS]
-```
-
-**Options:**
-
-| Option | Description |
-|--------|-------------|
-| `-f, --format` | Output format: text, markdown, json (default: text) |
-| `-o, --output` | Output file path |
-| `-c, --compare` | Baseline to compare against |
-| `--export-csv` | Directory for CSV exports |
-| `--no-color` | Disable colored output |
-| `--baselines-dir` | Custom baselines directory |
-
-**Examples:**
+**Quick reference:**
 
 ```bash
-# Text report to console
+# Generate text report
 cow-perf report generate my-baseline
 
-# Markdown report for GitHub
-cow-perf report generate my-baseline -f markdown -o report.md
-
-# JSON report for automation
-cow-perf report generate my-baseline -f json -o report.json
-
-# Compare against another baseline
-cow-perf report generate current-run --compare previous-baseline
+# Generate markdown report with comparison
+cow-perf report generate v2.0 --compare v1.0 -f markdown --save
 
 # Export metrics as CSV
 cow-perf report generate my-baseline --export-csv ./csv/
 ```
 
-### List Report Formats
+**Exit codes:** 0 = Success, 1 = Error, 2 = Performance regression detected
 
-Show available report formats:
+---
+
+## Chain Reconciliation
+
+**Automatic Feature**: After every test run, the system automatically reconciles the database with on-chain state by querying Trade events from the blockchain.
+
+### What It Does
+
+- Queries on-chain Trade events for actual filled orders
+- Updates database with correct order statuses
+- Updates Prometheus metrics with accurate counts
+- Resolves discrepancies caused by Anvil fork mode event sync issues
+
+### Why It's Needed
+
+Anvil (forked Ethereum node) has a known issue where `eth_getLogs` doesn't return events from transactions in the same block they occurred. This causes the orderbook database to miss settlement events during testing. Chain reconciliation ensures the metrics reflect actual on-chain state.
+
+### Usage
 
 ```bash
-cow-perf report list-formats
+# Automatic - runs after every test
+cow-perf run --config scenario.yml
+
+# Reconciliation happens automatically after test completion
+# Check logs for "Chain reconciliation complete" message
 ```
 
-### Report Contents
+### Metrics Updated
 
-Reports include:
+- Total orders filled (on-chain vs database)
+- Order status counts by status
+- Reconciliation discrepancy percentage
+- Prometheus metrics: `orders_database_status`, `orders_onchain_status`, `reconciliation_discrepancy`
 
-- **Executive Summary**: Verdict (SUCCESS/WARNING/FAILURE), key metrics, findings
-- **Detailed Metrics**: Order lifecycle latencies (P50-P99), API response times, resource utilization
-- **Comparison Results**: Regressions and improvements vs baseline (when comparing)
-- **Recommendations**: Actionable suggestions based on metric analysis
+### See Also
 
-### Exit Codes
-
-| Code | Meaning |
-|------|---------|
-| 0 | Success / No issues |
-| 1 | Error (invalid arguments, missing files) |
-| 2 | Performance failure/regression detected |
+- [Known Limitations](../README.md#known-limitations) - User-facing explanation
+- Implementation: `src/cow_performance/chain_reconciliation.py`
 
 ---
 
@@ -720,40 +709,40 @@ cow-perf run --scenario scenarios/my-test.yml
 ### Baseline Comparison Workflow
 
 ```bash
-# 1. Run initial test and save results
-cow-perf run --scenario load-test > baseline-results.json
+# 1. Run initial test and save as baseline
+cow-perf run --scenario load-test --save-baseline v1.0 \
+  --baseline-description "Initial baseline before changes"
 
-# 2. Create baseline from results
-cow-perf baselines --save v1.0:baseline-results.json
-
-# 3. Make changes to system
+# 2. Make changes to system
 # ... deploy updates, configuration changes, etc.
 
-# 4. Run test again and compare
+# 3. Run test again and compare
 cow-perf run --scenario load-test --baseline v1.0
 
-# 5. View baseline details
+# 4. View baseline details
 cow-perf baselines --show v1.0
 ```
 
 ### Multi-Environment Testing
 
 ```bash
-# Test against local environment
+# Test against local environment and save baseline
 export COW_API_BASE_URL=http://localhost:8080
-cow-perf run --scenario load-test > local-results.json
+cow-perf run --scenario load-test --save-baseline local \
+  --baseline-tags "environment:local"
 
-# Test against staging
+# Test against staging and save baseline
 export COW_API_BASE_URL=https://staging-api.cow.fi
-cow-perf run --scenario load-test > staging-results.json
+cow-perf run --scenario load-test --save-baseline staging \
+  --baseline-tags "environment:staging"
 
 # Test against production (read-only)
 export COW_API_BASE_URL=https://api.cow.fi
-cow-perf run --scenario read-only-test > prod-results.json
+cow-perf run --scenario read-only-test --save-baseline prod \
+  --baseline-tags "environment:production,read-only"
 
 # Compare results
-cow-perf baselines --save local:local-results.json
-cow-perf baselines --save staging:staging-results.json
 cow-perf baselines --show local
 cow-perf baselines --show staging
+cow-perf baselines --show prod
 ```
