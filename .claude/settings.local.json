@@ -25,8 +25,7 @@
       "Bash(.venv/bin/python:*)",
       "Bash(.venv/bin/cow-perf:*)",
       "Bash(.venv/bin/pip show:*)",
-      "Bash(.venv/bin/ruff check:*)",
-      "Bash(.venv/bin/cow-perf:*)"
+      "Bash(.venv/bin/ruff check:*)"
     ]
   }
 }

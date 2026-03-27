@@ -30,6 +30,9 @@ Storage:
     - MetricsStore: Thread-safe in-memory metrics storage
     - MetricsStoreConfig: Configuration for storage limits
 
+Expiration Tracking:
+    - ExpirationChecker: Background task to track order expiration
+
 Export:
     - export_store_to_json: Export full store to JSON
     - export_orders_to_csv: Export orders to CSV
@@ -44,6 +47,7 @@ from cow_performance.metrics.aggregator import (
     PercentileStats,
     ResourceAggregateMetrics,
 )
+from cow_performance.metrics.expiration_checker import ExpirationChecker
 from cow_performance.metrics.export import (
     api_metrics_to_dict,
     export_api_metrics_to_csv,
@@ -94,6 +98,8 @@ __all__ = [
     # Storage
     "MetricsStore",
     "MetricsStoreConfig",
+    # Expiration Tracking
+    "ExpirationChecker",
     # Export
     "export_store_to_json",
     "export_orders_to_csv",

@@ -57,6 +57,7 @@ class OrderTracker:
         sell_amount: str = "0",
         buy_amount: str = "0",
         order_type: str = "unknown",
+        valid_to: int | None = None,
     ) -> OrderMetadata:
         """
         Start tracking a new order.
@@ -69,6 +70,7 @@ class OrderTracker:
             sell_amount: Amount being sold
             buy_amount: Amount being bought
             order_type: Type of order (market, limit, twap, stop_loss, good_after_time)
+            valid_to: Unix timestamp when order expires
 
         Returns:
             The OrderMetadata instance for this order
@@ -82,6 +84,7 @@ class OrderTracker:
             sell_amount=sell_amount,
             buy_amount=buy_amount,
             order_type=order_type,
+            valid_to=valid_to,
         )
         self._orders[order_uid] = metadata
 
@@ -182,6 +185,10 @@ class OrderTracker:
         metadata = self.get_order(order_uid)
         if metadata is None:
             return OrderStatus.FAILED
+
+        # Don't poll if already in terminal state (e.g., marked as EXPIRED by ExpirationChecker)
+        if metadata.is_terminal_state():
+            return metadata.current_status
 
         try:
             # Call the real API

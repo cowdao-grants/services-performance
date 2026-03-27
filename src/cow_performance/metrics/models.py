@@ -40,9 +40,12 @@ class OrderMetadata:
     acceptance_time: float | None = None
     first_fill_time: float | None = None
     completion_time: float | None = None
+    expiration_time: float | None = None  # When order was detected as expired
 
     current_status: OrderStatus = OrderStatus.CREATED
     status_history: list[tuple[float, OrderStatus]] = field(default_factory=list)
+
+    valid_to: int | None = None  # Unix timestamp when order expires
 
     sell_token: str = ""
     buy_token: str = ""
@@ -81,6 +84,10 @@ class OrderMetadata:
             and self.first_fill_time is None
         ):
             self.first_fill_time = timestamp
+
+        # Handle expiration time
+        if new_status == OrderStatus.EXPIRED and self.expiration_time is None:
+            self.expiration_time = timestamp
 
         # Handle completion (terminal states)
         if new_status in (

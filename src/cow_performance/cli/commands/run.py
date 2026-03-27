@@ -28,7 +28,7 @@ from cow_performance.load_generation import (
     create_mainnet_token_registry,
 )
 from cow_performance.load_generation.order_signer import ConditionalOrderSigner
-from cow_performance.metrics import MetricsStore
+from cow_performance.metrics import ExpirationChecker, MetricsStore
 from cow_performance.monitoring import ResourceMonitor, ResourceMonitorConfig
 from cow_performance.prometheus import PrometheusExporter
 from cow_performance.utils.chain_reconciliation import ChainReconciliator
@@ -315,7 +315,7 @@ async def run_performance_test(
         chain_id=config.network.chain_id,
         settlement_contract=config.network.settlement_contract,
         amount_range=amount_range,
-        valid_duration=3600,  # 1 hour validity
+        valid_duration=60,  # 60 seconds for expiration testing
         fee_percentage=0.0,  # Zero fees (CoW Protocol calculates fees automatically)
         api_client=api_client,  # Pass API client for getting quotes
     )
@@ -341,6 +341,12 @@ async def run_performance_test(
 
     # Create shared metrics store for all components
     metrics_store = MetricsStore()
+
+    # Create expiration checker for automatic order expiration tracking
+    expiration_checker = ExpirationChecker(
+        metrics_store=metrics_store,
+        check_interval=5.0,  # Check every 5 seconds
+    )
 
     # Start Prometheus exporter if port specified
     prometheus_exporter: PrometheusExporter | None = None
@@ -493,6 +499,9 @@ async def run_performance_test(
             )
 
             try:
+                # Start expiration checker
+                await expiration_checker.start()
+
                 # Start test
                 start_time = datetime.now()
 
@@ -535,6 +544,9 @@ async def run_performance_test(
                 console.print(f"\n[bold red]Error:[/bold red] {e}")
                 raise
     finally:
+        # Stop expiration checker
+        await expiration_checker.stop()
+
         # Stop resource monitoring
         if resource_monitor:
             await resource_monitor.stop()

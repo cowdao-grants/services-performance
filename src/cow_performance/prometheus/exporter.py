@@ -123,6 +123,8 @@ class PrometheusExporter:
                 self._update_api_metrics(metric)
             elif metric_type == "resource":
                 self._update_resource_metrics(metric)
+            elif metric_type == "uid_rename" and isinstance(metric, tuple) and len(metric) == 2:
+                self._rename_order_uid(str(metric[0]), str(metric[1]))
         except Exception as e:
             logger.warning("Error updating Prometheus metric: %s", e)
 
@@ -185,8 +187,12 @@ class PrometheusExporter:
             self._remove_order_from_trader(trader_index, order.order_uid)
 
         elif status == OrderStatus.EXPIRED:
+            print(
+                f"EXPIRED: order_uid={order.order_uid[:10]}..., was_in_active={order.order_uid in self._active_orders}, active_before={len(self._active_orders)}"
+            )
             self._metrics.orders_expired.labels(scenario=scenario).inc()
             self._active_orders.discard(order.order_uid)
+            print(f"EXPIRED: active_after={len(self._active_orders)}")
             self._remove_order_from_trader(trader_index, order.order_uid)
 
         elif status == OrderStatus.CANCELLED:
@@ -196,6 +202,18 @@ class PrometheusExporter:
 
         # Update active orders gauge
         self._metrics.orders_active.labels(scenario=scenario).set(len(self._active_orders))
+
+    def _rename_order_uid(self, old_uid: str, new_uid: str) -> None:
+        """Update internal UID references after a temp→real UID swap."""
+        if old_uid in self._active_orders:
+            self._active_orders.discard(old_uid)
+            self._active_orders.add(new_uid)
+
+        for order_set in self._orders_by_trader.values():
+            if old_uid in order_set:
+                order_set.discard(old_uid)
+                order_set.add(new_uid)
+                break
 
     def _get_trader_index(self, owner_address: str) -> str:
         """Get or assign a trader index for an address.
