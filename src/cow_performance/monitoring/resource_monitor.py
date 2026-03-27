@@ -196,11 +196,14 @@ class ResourceMonitor:
         except (KeyError, TypeError):
             return 0, 0
 
-    async def _collect_sample(
+    def _collect_sample_sync(
         self, container_name: str, container: Container
     ) -> ResourceSample | None:
         """
-        Collect a single resource sample from a container.
+        Collect a single resource sample from a container (synchronous).
+
+        Runs blocking Docker API calls that must not be called directly from
+        the asyncio event loop — use _collect_sample() instead.
 
         Args:
             container_name: Name of the container
@@ -254,6 +257,27 @@ class ResourceMonitor:
             logger.warning(f"Failed to collect stats from {container_name}: {e}")
             return None
 
+    async def _collect_sample(
+        self, container_name: str, container: Container
+    ) -> ResourceSample | None:
+        """
+        Collect a single resource sample from a container.
+
+        Runs the blocking Docker API calls in a thread executor so the
+        asyncio event loop is not blocked.
+
+        Args:
+            container_name: Name of the container
+            container: Docker Container object
+
+        Returns:
+            ResourceSample if successful, None if collection failed
+        """
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None, self._collect_sample_sync, container_name, container
+        )
+
     async def _monitoring_loop(self) -> None:
         """Main monitoring loop that collects samples at configured intervals."""
         logger.info(
@@ -263,7 +287,8 @@ class ResourceMonitor:
 
         while self._running:
             # Refresh container list periodically (containers may restart)
-            self._containers = self._discover_containers()
+            loop = asyncio.get_event_loop()
+            self._containers = await loop.run_in_executor(None, self._discover_containers)
 
             # Collect samples from all containers
             for container_name, container in list(self._containers.items()):
@@ -315,15 +340,12 @@ class ResourceMonitor:
         logger.info("Stopping resource monitor...")
         self._running = False
 
-        if self._task:
+        if self._task and not self._task.done():
+            self._task.cancel()
             try:
-                await asyncio.wait_for(self._task, timeout=5.0)
-            except TimeoutError:
-                self._task.cancel()
-                try:
-                    await self._task
-                except asyncio.CancelledError:
-                    pass
+                await self._task
+            except asyncio.CancelledError:
+                pass
 
         # Clean up Docker client
         if self._docker_client:

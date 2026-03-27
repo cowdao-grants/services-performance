@@ -42,30 +42,31 @@ from ..output import (
 from ..wallet_funding import create_trader_pool_from_config, fund_trader_pool
 
 
-class GracefulShutdownHandler:
-    """Handles graceful shutdown on SIGINT (Ctrl+C)."""
+def _register_shutdown_handlers(orchestrator: TraderOrchestrator) -> None:
+    """Register asyncio-native signal handlers for SIGINT and SIGTERM.
 
-    def __init__(self, orchestrator: TraderOrchestrator):
-        """Initialize the shutdown handler.
+    Cancels all running trader tasks immediately so that any sleeping or
+    awaiting coroutines are interrupted at the next yield point.
 
-        Args:
-            orchestrator: The TraderOrchestrator to stop on signal
-        """
-        self.orchestrator = orchestrator
-        self.shutdown_requested = False
+    Args:
+        orchestrator: The TraderOrchestrator whose tasks will be cancelled
+    """
+    loop = asyncio.get_event_loop()
+    shutdown_called = False
 
-    def handle_signal(self, signum: int, frame: Any) -> None:
-        """Handle shutdown signal.
+    def _handle_shutdown() -> None:
+        nonlocal shutdown_called
+        if shutdown_called:
+            return
+        shutdown_called = True
+        print("\n\nShutdown requested, stopping traders...")
+        orchestrator._running = False
+        for task in orchestrator.tasks:
+            if not task.done():
+                task.cancel()
 
-        Args:
-            signum: Signal number
-            frame: Current stack frame
-        """
-        if not self.shutdown_requested:
-            self.shutdown_requested = True
-            print("\n\nShutdown requested, stopping traders gracefully...")
-            # The orchestrator's run() method will check _running flag
-            self.orchestrator._running = False
+    loop.add_signal_handler(signal.SIGINT, _handle_shutdown)
+    loop.add_signal_handler(signal.SIGTERM, _handle_shutdown)
 
 
 async def update_prometheus_metrics(
@@ -452,9 +453,8 @@ async def run_performance_test(
         rate_limit_config=rate_limit_config,
     )
 
-    # Set up graceful shutdown handler
-    shutdown_handler = GracefulShutdownHandler(orchestrator)
-    signal.signal(signal.SIGINT, shutdown_handler.handle_signal)
+    # Set up graceful shutdown handlers for SIGINT and SIGTERM
+    _register_shutdown_handlers(orchestrator)
 
     # Create resource monitor (only if not dry-run)
     resource_monitor = None
