@@ -68,11 +68,11 @@ Comprehensive performance testing suite for the CoW Protocol Playground, enablin
 
 5. **Run your first test**
 
-   > **Wallet funding required**: Trader wallets need ETH and tokens before orders can be submitted. The Quick Start scenario (`regression-test.yml`) includes a `wallet:` block that handles this automatically via Anvil storage manipulation. See [Wallet Funding](docs/wallet-funding.md) for details.
+   > **Wallet funding required**: Trader wallets need ETH and tokens before orders can be submitted. The Quick Start scenario (`light-load.yml`) includes a `wallet:` block that handles this automatically via Anvil storage manipulation. See [Wallet Funding](docs/wallet-funding.md) for details.
 
    ```bash
-   # Quick 2-minute regression test (wallet funding enabled in scenario config)
-   cow-perf run --config configs/scenarios/predefined/enhanced/regression-test.yml
+   # Light 2-minute load test (wallet funding enabled in scenario config)
+   cow-perf run --config configs/scenarios/predefined/light-load.yml
    ```
 
 ---
@@ -97,13 +97,13 @@ The suite includes 5 production-ready scenarios with automated validation:
 
 ```bash
 # Run a predefined scenario
-cow-perf run --config configs/scenarios/predefined/enhanced/regression-test.yml
+cow-perf run --config configs/scenarios/predefined/light-load.yml
 
 # Run with custom parameters
 cow-perf run --traders 10 --duration 120
 
 # Save results as baseline for comparison
-cow-perf run --config configs/scenarios/predefined/enhanced/regression-test.yml \
+cow-perf run --config configs/scenarios/predefined/light-load.yml \
   --save-baseline "v1.0" \
   --baseline-description "Production baseline"
 ```
@@ -118,7 +118,7 @@ Save baselines and generate comprehensive reports with regression detection.
 
 ```bash
 # Run test and save as baseline
-cow-perf run --config configs/scenarios/predefined/enhanced/regression-test.yml --save-baseline "v1.0"
+cow-perf run --config configs/scenarios/predefined/light-load.yml --save-baseline "v1.0"
 
 # Generate report
 cow-perf report generate v1.0
@@ -157,7 +157,7 @@ Prometheus metrics export requires passing `--prometheus-port 9091` to the run c
 docker compose --profile monitoring up -d
 
 # Run a test with Prometheus export enabled
-cow-perf run --config configs/scenarios/predefined/enhanced/regression-test.yml \
+cow-perf run --config configs/scenarios/predefined/light-load.yml \
   --prometheus-port 9091
 
 # View dashboards
