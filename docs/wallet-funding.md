@@ -88,15 +88,15 @@ wallet:
     DAI: 10000.0
 EOF
 
-# Run test
-cow-perf run --config scenario.yml
+# Run test (replace with your actual scenario path)
+cow-perf run --config configs/scenarios/predefined/enhanced/regression-test.yml
 ```
 
 ### Verify Funding
 
 ```bash
-# Check logs for funding confirmation
-cow-perf run --config scenario.yml --verbose
+# Check logs for funding confirmation (replace with your actual scenario path)
+cow-perf run --config configs/scenarios/predefined/enhanced/regression-test.yml --verbose
 
 # Look for:
 # "Funded wallet 0x... with 10.0 ETH"

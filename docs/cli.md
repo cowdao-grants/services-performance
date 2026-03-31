@@ -640,44 +640,6 @@ cow-perf report generate my-baseline --export-csv ./csv/
 
 ---
 
-## Chain Reconciliation
-
-**Automatic Feature**: After every test run, the system automatically reconciles the database with on-chain state by querying Trade events from the blockchain.
-
-### What It Does
-
-- Queries on-chain Trade events for actual filled orders
-- Updates database with correct order statuses
-- Updates Prometheus metrics with accurate counts
-- Resolves discrepancies caused by Anvil fork mode event sync issues
-
-### Why It's Needed
-
-Anvil (forked Ethereum node) has a known issue where `eth_getLogs` doesn't return events from transactions in the same block they occurred. This causes the orderbook database to miss settlement events during testing. Chain reconciliation ensures the metrics reflect actual on-chain state.
-
-### Usage
-
-```bash
-# Automatic - runs after every test
-cow-perf run --config scenario.yml
-
-# Reconciliation happens automatically after test completion
-# Check logs for "Chain reconciliation complete" message
-```
-
-### Metrics Updated
-
-- Total orders filled (on-chain vs database)
-- Order status counts by status
-- Reconciliation discrepancy percentage
-- Prometheus metrics: `orders_database_status`, `orders_onchain_status`, `reconciliation_discrepancy`
-
-### See Also
-
-- [Known Limitations](../README.md#known-limitations) - User-facing explanation
-- Implementation: `src/cow_performance/chain_reconciliation.py`
-
----
 
 ## Example Workflows
 

@@ -37,7 +37,7 @@ poetry run cow-perf run --config configs/scenarios/predefined/smoke-test.yml
 
 ### Q: Why do I see 0% fill rate during tests?
 
-**A:** This is normal in Anvil fork mode - events don't sync during the fork. Chain reconciliation runs automatically after tests to update fill rates from on-chain data. See [Known Limitations](../README.md#known-limitations).
+**A:** This is normal in Anvil fork mode — the CoW Protocol database relies on `debug_traceTransaction` to detect settlement events, which Anvil does not implement. The actual on-chain fill rate is typically 50–75% for short tests. See [Known Limitations](../README.md#known-limitations) for details.
 
 ### Q: How long should my tests run?
 
