@@ -158,10 +158,18 @@ class PrometheusExporter:
                 self._metrics.submission_latency.labels(scenario=scenario).observe(latency)
 
         elif status in (OrderStatus.ACCEPTED, OrderStatus.OPEN):
-            # Record orderbook acceptance latency
+            # Record orderbook acceptance latency (submission → acceptance)
             latency = order.get_time_to_accept()
             if latency is not None:
                 self._metrics.orderbook_latency.labels(scenario=scenario).observe(latency)
+
+            # Record total acceptance latency (creation → acceptance)
+            if order.acceptance_time is not None and order.creation_time is not None:
+                total_to_accept = order.acceptance_time - order.creation_time
+                if total_to_accept >= 0:
+                    self._metrics.order_acceptance_latency.labels(scenario=scenario).observe(
+                        total_to_accept
+                    )
 
         elif status == OrderStatus.FILLED:
             self._metrics.orders_filled.labels(scenario=scenario).inc()
@@ -520,3 +528,17 @@ class PrometheusExporter:
         self._metrics.regression_detected.labels(severity="critical").set(critical)
         self._metrics.regression_detected.labels(severity="major").set(major)
         self._metrics.regression_detected.labels(severity="minor").set(minor)
+
+    # --- Scaling Experiment Methods ---
+
+    def record_scaling_phase(self, order_count_target: int) -> None:
+        """Record the target order count for the current scaling phase."""
+        self._metrics.scaling_phase_order_count.labels(scenario=self.scenario).set(
+            order_count_target
+        )
+
+    def record_complexity_slope(self, metric_name: str, slope: float) -> None:
+        """Record the power-law slope from complexity analysis for a given metric."""
+        self._metrics.scaling_complexity_slope.labels(
+            scenario=self.scenario, metric=metric_name
+        ).set(slope)

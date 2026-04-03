@@ -192,6 +192,30 @@ cow-perf run --config scenario.yml --prometheus-port 0
 - `cow_perf_regression_detected{severity}` - Gauge
 - `cow_perf_regressions_total{severity}` - Counter
 
+**Acceptance Latency (new):**
+- `cow_perf_order_acceptance_latency_seconds{scenario}` - Histogram
+  - Measures total time from **order creation** to **orderbook acceptance** (creation → acceptance).
+  - Complements the existing `orderbook_latency` (submission → acceptance) by including the
+    time the order spends in the local queue before submission.
+  - Buckets: 1, 5, 10, 30, 60, 120, 300, 600 seconds.
+  - Useful query: `histogram_quantile(0.99, rate(cow_perf_order_acceptance_latency_seconds_bucket[5m]))`
+
+**Scaling / Complexity Metrics (new — set by `cow-perf scale`):**
+- `cow_perf_scaling_phase_order_count_target{scenario}` - Gauge
+  - Records the target order count for the currently running (or last completed) scaling phase.
+- `cow_perf_scaling_complexity_slope{scenario, metric}` - Gauge
+  - Power-law slope k from log-log regression (y ~ x^k) for each analysed metric.
+  - Interpretation: k ≈ 1 → O(n) linear; k ≈ 2 → O(n²) quadratic; k < 1 → sub-linear.
+
+### Memory Metrics (scaling experiment)
+
+During `cow-perf scale` runs, container RSS memory is sampled via the Docker SDK
+before and after each step. The deltas are included in the JSON scaling report
+(`total_memory_delta_bytes` per phase) and in the complexity analysis.
+
+To observe heap growth interactively, the `cow_perf_container_memory_bytes{container}`
+gauge (already scraped by Prometheus) shows the rolling RSS — compare its value
+at the start and end of each scaling step.
 
 ### Grafana Integration
 

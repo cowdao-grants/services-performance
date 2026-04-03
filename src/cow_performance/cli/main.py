@@ -16,6 +16,7 @@ from .commands.baselines import (
 )
 from .commands.report import app as report_app
 from .commands.run import run_command
+from .commands.scale import scale_command
 from .commands.scenarios import (
     create_scenario_template,
     list_scenarios_command,
@@ -479,6 +480,106 @@ def config_init(
         sys.exit(1)
     except Exception as e:
         console.print(f"\n[bold red]Error:[/bold red] {e}")
+        sys.exit(1)
+
+
+@app.command()
+def scale(
+    order_counts: Optional[str] = typer.Option(
+        None,
+        "--order-counts",
+        "-n",
+        help=(
+            "Comma-separated target order counts for each step. "
+            "Default: 50,100,200,400,800,1600,3200,6400,12800"
+        ),
+    ),
+    duration_per_step: int = typer.Option(
+        120,
+        "--duration-per-step",
+        "-d",
+        help="Duration in seconds for each scaling step (default: 120)",
+    ),
+    config_file: Optional[str] = typer.Option(
+        None, "--config", "-c", help="Path to base configuration file"
+    ),
+    monitor_containers: Optional[str] = typer.Option(
+        None,
+        "--monitor-containers",
+        "-m",
+        help=(
+            "Comma-separated Docker container names to track for RSS memory. "
+            "Default: autopilot,driver,orderbook"
+        ),
+    ),
+    output_file: Optional[str] = typer.Option(
+        None, "--output", "-o", help="Path to write the JSON scaling report"
+    ),
+    skip_memory: bool = typer.Option(
+        False,
+        "--skip-memory",
+        help="Skip Docker memory sampling (useful when Docker is not running locally)",
+    ),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
+) -> None:
+    """Run a scaling experiment across doubling order counts.
+
+    Submits orders at increasing volumes (50 → 12 800 by default) and
+    performs log-log regression to classify backend algorithmic complexity
+    (linear, log-linear, quadratic, etc.) for latency and memory metrics.
+
+    Examples:
+        # Full doubling sequence with defaults
+        cow-perf scale
+
+        # Custom order counts
+        cow-perf scale --order-counts 100,200,400,800
+
+        # Custom config and output
+        cow-perf scale --config my-config.yml --output scaling-report.json
+
+        # Skip memory sampling (when Docker SDK is unavailable)
+        cow-perf scale --skip-memory
+    """
+    parsed_counts = [50, 100, 200, 400, 800, 1600, 3200, 6400, 12800]
+    if order_counts:
+        try:
+            parsed_counts = [int(s.strip()) for s in order_counts.split(",") if s.strip()]
+        except ValueError:
+            console.print(
+                "[bold red]Error:[/bold red] --order-counts must be comma-separated integers"
+            )
+            sys.exit(1)
+
+    parsed_containers = ["autopilot", "driver", "orderbook"]
+    if monitor_containers:
+        parsed_containers = [s.strip() for s in monitor_containers.split(",") if s.strip()]
+
+    output_path = Path(output_file) if output_file else None
+
+    try:
+        cfg = load_config(Path(config_file) if config_file else None)
+        scale_command(
+            config=cfg,
+            order_counts=sorted(set(parsed_counts)),
+            duration_per_step=duration_per_step,
+            monitor_containers=parsed_containers,
+            output_file=output_path,
+            skip_memory=skip_memory,
+            verbose=verbose,
+        )
+    except FileNotFoundError as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        sys.exit(2)
+    except ValueError as e:
+        console.print(f"[bold red]Configuration Error:[/bold red] {e}")
+        sys.exit(3)
+    except Exception as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
+        if verbose:
+            import traceback
+
+            traceback.print_exc()
         sys.exit(1)
 
 
