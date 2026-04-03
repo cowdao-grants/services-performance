@@ -520,4 +520,3 @@ class PrometheusExporter:
         self._metrics.regression_detected.labels(severity="critical").set(critical)
         self._metrics.regression_detected.labels(severity="major").set(major)
         self._metrics.regression_detected.labels(severity="minor").set(minor)
-

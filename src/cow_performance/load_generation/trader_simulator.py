@@ -9,7 +9,7 @@ import asyncio
 import random
 import time
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from .conditional_order_factory import ConditionalOrderFactory
@@ -19,7 +19,7 @@ from .order_tracker import OrderStatus, OrderTracker
 from .trader_account import TraderAccount
 
 
-class TradingPattern(str, Enum):
+class TradingPattern(StrEnum):
     """Trading behavior patterns for simulation."""
 
     CONSTANT_RATE = "constant_rate"  # Fixed interval between orders

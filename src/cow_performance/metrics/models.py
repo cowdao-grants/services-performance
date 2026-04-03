@@ -7,10 +7,10 @@ performance metrics during load testing.
 
 import time
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 
 
-class OrderStatus(str, Enum):
+class OrderStatus(StrEnum):
     """Order lifecycle states."""
 
     CREATED = "created"  # Order created locally, not yet submitted

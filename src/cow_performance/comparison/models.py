@@ -2,10 +2,10 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 
-class RegressionSeverity(str, Enum):
+class RegressionSeverity(StrEnum):
     """Severity level of a regression."""
 
     CRITICAL = "critical"  # >30% latency increase, >50% throughput decrease, error rate >5%
@@ -14,7 +14,7 @@ class RegressionSeverity(str, Enum):
     NONE = "none"  # Within acceptable variation
 
 
-class ComparisonVerdict(str, Enum):
+class ComparisonVerdict(StrEnum):
     """Overall verdict for a comparison."""
 
     IMPROVEMENT = "improvement"  # Net positive change
@@ -22,7 +22,7 @@ class ComparisonVerdict(str, Enum):
     NEUTRAL = "neutral"  # No significant change
 
 
-class MetricType(str, Enum):
+class MetricType(StrEnum):
     """Type of metric being compared."""
 
     LATENCY = "latency"  # Time-based metrics (lower is better)

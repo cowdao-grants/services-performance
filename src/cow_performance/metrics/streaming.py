@@ -10,7 +10,7 @@ import time
 from collections import deque
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from cow_performance.metrics.store import MetricsStore
@@ -18,7 +18,7 @@ from cow_performance.metrics.store import MetricsStore
 logger = logging.getLogger(__name__)
 
 
-class MetricEventType(str, Enum):
+class MetricEventType(StrEnum):
     """Types of metric events."""
 
     ORDER = "order"

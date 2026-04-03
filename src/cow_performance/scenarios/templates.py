@@ -143,7 +143,7 @@ class TemplateExpander:
 
             # Use default if provided
             if has_default:
-                return default_value if default_value is not None else ""
+                return str(default_value) if default_value is not None else ""
 
             # Required parameter missing
             raise ParameterError(
