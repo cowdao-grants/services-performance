@@ -308,9 +308,6 @@ class ConfigValidator:
         total = (
             config.market_order_ratio
             + config.limit_order_ratio
-            + config.twap_order_ratio
-            + config.stop_loss_order_ratio
-            + config.good_after_time_order_ratio
         )
 
         if total == 0:
@@ -331,9 +328,6 @@ class ConfigValidator:
             for ratio in [
                 config.market_order_ratio,
                 config.limit_order_ratio,
-                config.twap_order_ratio,
-                config.stop_loss_order_ratio,
-                config.good_after_time_order_ratio,
             ]
             if ratio > 0
         )

@@ -36,9 +36,6 @@ ramp_curve: "exponential"  # Exponential decrease (faster initial drop)
 # Order type distribution
 market_order_ratio: 0.5
 limit_order_ratio: 0.5
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 
 # Use case: Test system behavior during load reduction
 # - Verify resource cleanup

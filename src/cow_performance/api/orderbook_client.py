@@ -48,7 +48,7 @@ class OrderbookClient:
                 json=signed_order,
             ) as response:
                 if not response.ok:
-                    error_text = await response.text()
+                    error_text = (await response.text())[:300]
                     raise aiohttp.ClientResponseError(
                         request_info=response.request_info,
                         history=response.history,
@@ -130,7 +130,7 @@ class OrderbookClient:
                 json=quote_request,
             ) as response:
                 if response.status != 200:
-                    error_text = await response.text()
+                    error_text = (await response.text())[:300]
                     raise aiohttp.ClientError(
                         f"Quote request failed: {response.status}, message='{error_text}'"
                     )
@@ -196,7 +196,7 @@ class OrderbookClient:
                 json=request_body,
             ) as response:
                 if not response.ok:
-                    error_text = await response.text()
+                    error_text = (await response.text())[:300]
                     raise aiohttp.ClientResponseError(
                         request_info=response.request_info,
                         history=response.history,
@@ -273,7 +273,7 @@ class OrderbookClient:
                 json=request_body,
             ) as response:
                 if not response.ok:
-                    error_text = await response.text()
+                    error_text = (await response.text())[:300]
                     raise aiohttp.ClientResponseError(
                         request_info=response.request_info,
                         history=response.history,

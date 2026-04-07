@@ -94,9 +94,6 @@ def scenarios_dir(temp_dir):
         "base_rate": 60.0,
         "market_order_ratio": 0.6,
         "limit_order_ratio": 0.4,
-        "twap_order_ratio": 0.0,
-        "stop_loss_order_ratio": 0.0,
-        "good_after_time_order_ratio": 0.0,
     }
 
     with open(scenarios_dir / "test-scenario.yml", "w") as f:
@@ -174,17 +171,11 @@ class TestQuickStartMode:
         # Verify all order ratios are present and sum to 1.0
         assert config["market_order_ratio"] == 0.6
         assert config["limit_order_ratio"] == 0.4
-        assert config["twap_order_ratio"] == 0.0
-        assert config["stop_loss_order_ratio"] == 0.0
-        assert config["good_after_time_order_ratio"] == 0.0
 
         total = sum(
             [
                 config["market_order_ratio"],
                 config["limit_order_ratio"],
-                config["twap_order_ratio"],
-                config["stop_loss_order_ratio"],
-                config["good_after_time_order_ratio"],
             ]
         )
         assert abs(total - 1.0) < 0.01
@@ -469,9 +460,6 @@ class TestSaveConfig:
             "base_rate": 60.0,
             "market_order_ratio": 0.6,
             "limit_order_ratio": 0.4,
-            "twap_order_ratio": 0.0,
-            "stop_loss_order_ratio": 0.0,
-            "good_after_time_order_ratio": 0.0,
         }
 
         generator.save_config(config, output_path)
@@ -497,9 +485,6 @@ class TestSaveConfig:
             "base_rate": 60.0,
             "market_order_ratio": 1.0,
             "limit_order_ratio": 0.0,
-            "twap_order_ratio": 0.0,
-            "stop_loss_order_ratio": 0.0,
-            "good_after_time_order_ratio": 0.0,
         }
 
         generator.save_config(config, output_path)

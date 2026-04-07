@@ -29,7 +29,6 @@ class TestNetworkConfig:
         assert config.chain_id == 1
         assert config.rpc_url == "https://eth.llamarpc.com"
         assert config.settlement_contract == "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"
-        assert config.composable_cow_contract == "0xfdaFc9d1902f4e0b84f65F49f244b32b31013b74"
 
     def test_custom_values(self) -> None:
         """Test that custom values can be set."""
@@ -37,12 +36,10 @@ class TestNetworkConfig:
             chain_id=100,
             rpc_url="https://rpc.gnosischain.com",
             settlement_contract="0x1234567890123456789012345678901234567890",
-            composable_cow_contract="0x0987654321098765432109876543210987654321",
         )
         assert config.chain_id == 100
         assert config.rpc_url == "https://rpc.gnosischain.com"
         assert config.settlement_contract == "0x1234567890123456789012345678901234567890"
-        assert config.composable_cow_contract == "0x0987654321098765432109876543210987654321"
 
     def test_env_var_override(self, monkeypatch: MonkeyPatch) -> None:
         """Test that environment variables override defaults."""
@@ -130,11 +127,8 @@ class TestPerformanceTestConfig:
         assert config.default_trader_count == 10
         assert config.default_duration == 60
         assert config.default_startup_interval == 0.1
-        assert config.market_order_ratio == 0.4
-        assert config.limit_order_ratio == 0.4
-        assert config.twap_order_ratio == 0.1
-        assert config.stop_loss_order_ratio == 0.05
-        assert config.good_after_time_order_ratio == 0.05
+        assert config.market_order_ratio == 0.5
+        assert config.limit_order_ratio == 0.5
 
     def test_nested_config_defaults(self) -> None:
         """Test that nested configs have correct defaults."""
@@ -150,9 +144,6 @@ class TestPerformanceTestConfig:
             default_duration=120,
             market_order_ratio=0.5,
             limit_order_ratio=0.5,
-            twap_order_ratio=0.0,
-            stop_loss_order_ratio=0.0,
-            good_after_time_order_ratio=0.0,
         )
         assert config.default_trader_count == 20
         assert config.default_duration == 120
@@ -162,11 +153,8 @@ class TestPerformanceTestConfig:
     def test_validate_ratio_sum_valid(self) -> None:
         """Test that valid ratio sum passes validation."""
         config = PerformanceTestConfig(
-            market_order_ratio=0.3,
-            limit_order_ratio=0.3,
-            twap_order_ratio=0.2,
-            stop_loss_order_ratio=0.1,
-            good_after_time_order_ratio=0.1,
+            market_order_ratio=0.6,
+            limit_order_ratio=0.4,
         )
         config.validate_ratio_sum()  # Should not raise
 
@@ -174,10 +162,7 @@ class TestPerformanceTestConfig:
         """Test that invalid ratio sum raises error."""
         config = PerformanceTestConfig(
             market_order_ratio=0.5,
-            limit_order_ratio=0.5,
-            twap_order_ratio=0.5,  # Sum > 1.0
-            stop_loss_order_ratio=0.0,
-            good_after_time_order_ratio=0.0,
+            limit_order_ratio=0.3,
         )
         with pytest.raises(ValueError, match="must sum to 1.0"):
             config.validate_ratio_sum()
@@ -255,9 +240,6 @@ class TestConfigFileOperations:
                 "default_duration": 120,
                 "market_order_ratio": 0.5,
                 "limit_order_ratio": 0.5,
-                "twap_order_ratio": 0.0,
-                "stop_loss_order_ratio": 0.0,
-                "good_after_time_order_ratio": 0.0,
             }
 
             with open(config_path, "w") as f:
@@ -337,11 +319,8 @@ class TestConfigValidation:
 
             # Create invalid config (ratios don't sum to 1.0)
             config_data = {
-                "market_order_ratio": 0.5,
-                "limit_order_ratio": 0.5,
-                "twap_order_ratio": 0.5,
-                "stop_loss_order_ratio": 0.0,
-                "good_after_time_order_ratio": 0.0,
+                "market_order_ratio": 0.3,
+                "limit_order_ratio": 0.3,
             }
 
             with open(config_path, "w") as f:

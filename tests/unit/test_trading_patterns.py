@@ -244,9 +244,6 @@ class TestOrderTypeRatios:
                 pattern=TradingPattern.CONSTANT_RATE,
                 market_order_ratio=0.5,
                 limit_order_ratio=0.3,
-                twap_order_ratio=0.0,
-                stop_loss_order_ratio=0.0,
-                good_after_time_order_ratio=0.0,
                 # Sum is 0.8, not 1.0
             )
 
@@ -254,19 +251,13 @@ class TestOrderTypeRatios:
         """Test that valid order type distributions are accepted."""
         config = TraderBehaviorConfig(
             pattern=TradingPattern.CONSTANT_RATE,
-            market_order_ratio=0.4,
+            market_order_ratio=0.6,
             limit_order_ratio=0.4,
-            twap_order_ratio=0.1,
-            stop_loss_order_ratio=0.05,
-            good_after_time_order_ratio=0.05,
         )
-        assert config.market_order_ratio == 0.4
+        assert config.market_order_ratio == 0.6
         assert config.limit_order_ratio == 0.4
         total = (
             config.market_order_ratio
             + config.limit_order_ratio
-            + config.twap_order_ratio
-            + config.stop_loss_order_ratio
-            + config.good_after_time_order_ratio
         )
         assert abs(total - 1.0) < 0.01  # Allow small floating point error

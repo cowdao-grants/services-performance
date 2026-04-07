@@ -294,6 +294,12 @@ class MetricsRegistry:
             buckets=[1, 5, 10, 30, 60, 120, 300, 600],
             registry=self.registry,
         )
+        self.container_rss_snapshot_bytes = Gauge(
+            "cow_perf_container_rss_snapshot_bytes",
+            "Container RSS memory at a scaling phase snapshot (before/after each step)",
+            ["scenario", "container", "snapshot"],
+            registry=self.registry,
+        )
 
     def _init_comparison_metrics(self) -> None:
         """Initialize baseline comparison metrics."""

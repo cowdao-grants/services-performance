@@ -155,9 +155,6 @@ class OrderMetrics:
     # Order type counts
     market_orders: int = 0
     limit_orders: int = 0
-    twap_orders: int = 0
-    stop_loss_orders: int = 0
-    good_after_time_orders: int = 0
 
     avg_time_to_submit: float = 0.0
     avg_time_to_accept: float = 0.0

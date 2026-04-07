@@ -36,9 +36,6 @@ spike_recovery_time: 45.0   # 45 seconds between spikes
 # Order type distribution (more market orders simulates urgency)
 market_order_ratio: 0.7
 limit_order_ratio: 0.3
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 
 # Rate limiting (recommended to prevent API overload)
 enable_global_rate_limit: true

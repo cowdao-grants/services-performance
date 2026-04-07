@@ -24,11 +24,8 @@ trading_pattern: "constant_rate"
 base_rate: 60.0
 
 # Common order distribution
-market_order_ratio: 0.4
-limit_order_ratio: 0.4
-twap_order_ratio: 0.1
-stop_loss_order_ratio: 0.05
-good_after_time_order_ratio: 0.05
+market_order_ratio: 0.5
+limit_order_ratio: 0.5
 
 # Common success criteria
 success_criteria:

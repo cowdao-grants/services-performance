@@ -121,11 +121,8 @@ class ScenarioConfig(BaseModel):
     )
 
     # Order type ratios (must sum to 1.0)
-    market_order_ratio: float = Field(default=0.4, ge=0.0, le=1.0)
-    limit_order_ratio: float = Field(default=0.4, ge=0.0, le=1.0)
-    twap_order_ratio: float = Field(default=0.1, ge=0.0, le=1.0)
-    stop_loss_order_ratio: float = Field(default=0.05, ge=0.0, le=1.0)
-    good_after_time_order_ratio: float = Field(default=0.05, ge=0.0, le=1.0)
+    market_order_ratio: float = Field(default=0.5, ge=0.0, le=1.0)
+    limit_order_ratio: float = Field(default=0.5, ge=0.0, le=1.0)
 
     # Trading pattern
     trading_pattern: str = Field(
@@ -190,17 +187,12 @@ class ScenarioConfig(BaseModel):
         total = (
             self.market_order_ratio
             + self.limit_order_ratio
-            + self.twap_order_ratio
-            + self.stop_loss_order_ratio
-            + self.good_after_time_order_ratio
         )
         if abs(total - 1.0) > 0.001:  # Allow for floating point precision
             raise ValueError(
                 f"Order type ratios must sum to 1.0, got {total}. "
                 f"Current ratios: market={self.market_order_ratio}, "
-                f"limit={self.limit_order_ratio}, twap={self.twap_order_ratio}, "
-                f"stop_loss={self.stop_loss_order_ratio}, "
-                f"good_after_time={self.good_after_time_order_ratio}"
+                f"limit={self.limit_order_ratio}"
             )
 
     def validate_pattern_parameters(self) -> None:
@@ -380,11 +372,8 @@ duration: 60  # seconds
 startup_interval: 0.1
 
 # Order type distribution (must sum to 1.0)
-market_order_ratio: 0.4
-limit_order_ratio: 0.4
-twap_order_ratio: 0.1
-stop_loss_order_ratio: 0.05
-good_after_time_order_ratio: 0.05
+market_order_ratio: 0.5
+limit_order_ratio: 0.5
 
 # Trading pattern
 trading_pattern: "constant_rate"  # constant_rate, burst, or random_interval
@@ -743,9 +732,6 @@ def validate_scenario_command(scenario_path: Path) -> None:
 
         table.add_row("Market", f"{scenario.market_order_ratio:.1%}")
         table.add_row("Limit", f"{scenario.limit_order_ratio:.1%}")
-        table.add_row("TWAP", f"{scenario.twap_order_ratio:.1%}")
-        table.add_row("Stop-Loss", f"{scenario.stop_loss_order_ratio:.1%}")
-        table.add_row("Good-After-Time", f"{scenario.good_after_time_order_ratio:.1%}")
 
         console.print(table)
 

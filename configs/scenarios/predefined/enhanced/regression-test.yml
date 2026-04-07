@@ -36,9 +36,6 @@ startup_interval: 0.1
 # Order type distribution - balanced for comprehensive testing
 market_order_ratio: 0.5
 limit_order_ratio: 0.5
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 
 # Wallet funding - automatically funds test traders via Anvil storage manipulation
 # Required for first-run so traders have ETH and tokens to submit orders

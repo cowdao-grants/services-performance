@@ -1,11 +1,9 @@
 # CoW Performance Testing Suite — Scaling / Complexity Scenario
 #
-# Use with:  cow-perf scale --config configs/scenarios/predefined/scaling-complexity.yml
+# Use with:  cow-perf run --config configs/scenarios/predefined/scaling-complexity.yml
 #
 # Runs a doubling sequence (50 → 12 800 orders) and classifies backend
 # algorithmic complexity for latency and memory metrics.
-# Each step submits orders at a rate that targets the listed order count
-# within the configured duration_per_step window.
 
 name: "Scaling Complexity Analysis"
 description: >
@@ -15,50 +13,48 @@ description: >
   for p99 submission latency, p99 lifecycle latency, and heap growth.
 tags: ["scaling", "complexity", "profiling", "whitebox"]
 
-# ----- Step sizing -------------------------------------------------------
-# These are read by `cow-perf scale`; adjust to match your environment.
-# The order_counts and duration_per_step below are the defaults used when
-# no --order-counts / --duration-per-step flags are passed.
+# ----- Scaling experiment ----------------------------------------------------
+scaling:
+  enabled: true
+  order_counts: [50, 100, 200, 400, 800, 1600, 3200, 6400, 12800]
+  duration_per_step: 120        # seconds per step
+  monitor_containers: [autopilot, driver, orderbook]
+  skip_memory: true
+  # output_file: ".cow-perf/results/scaling-report.json"
 
-# order_counts: [50, 100, 200, 400, 800, 1600, 3200, 6400, 12800]
-# duration_per_step: 120   # seconds per step
-
-# ----- Base test config (shared across all steps) -----------------------
+# ----- Base test config (shared across all steps) ----------------------------
 
 num_traders: 20          # 20 traders provides good parallelism for high rates
 trading_pattern: "constant_rate"
-base_rate: 60.0          # overridden per-step by the scale command
+base_rate: 60.0          # overridden per-step by the scaling logic
 
 # Order type distribution — keep simple for scaling analysis
 market_order_ratio: 0.5
 limit_order_ratio: 0.5
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 
-# Order amounts — keep small to maximise fill rate at scale
-min_order_amount: 0.1
-max_order_amount: 1.0
+# Order amounts — must be large enough to cover gas fees (~0.5 WETH equivalent)
+min_order_amount: 5.0
+max_order_amount: 10.0
 
 # No rate limiting — we want to stress the backend
 enable_global_rate_limit: false
 enable_per_trader_rate_limit: false
 
-# ----- Network / API ----------------------------------------------------
+# ----- Network / API ---------------------------------------------------------
 network:
   chain_id: 1
   rpc_url: "http://localhost:8545"
 
-# ----- Wallet funding ---------------------------------------------------
+# ----- Wallet funding --------------------------------------------------------
 wallet:
   funding_enabled: true
-  eth_balance: 10.0
+  eth_balance: 100.0
   token_balances:
-    WETH: 10.0
-    DAI: 10000.0
-    USDC: 10000.0
+    WETH: 10000.0   # 10K per trader; all 9 steps combined need ~4300 WETH per trader
+    DAI: 10000.0    # 10K per trader via mint (unlimited); no whale balance needed
+    USDC: 10000.0   # 10K per trader × 20 = 200K total from Binance 14 cold wallet
 
-# ----- Expected outcomes ------------------------------------------------
+# ----- Expected outcomes -----------------------------------------------------
 # For a healthy solver the p99 lifecycle latency should grow roughly
 # linearly (O(n)) with order count.  Super-linear growth (O(n²) or worse)
 # indicates an algorithmic bottleneck in the solver or autopilot.

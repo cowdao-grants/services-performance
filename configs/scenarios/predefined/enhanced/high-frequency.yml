@@ -34,9 +34,6 @@ startup_interval: 0.01  # Fast startup
 # Order type distribution - market orders only for speed
 market_order_ratio: 1.0
 limit_order_ratio: 0.0
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 
 # Trading pattern - very high rate
 trading_pattern: constant_rate

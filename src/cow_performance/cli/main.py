@@ -142,7 +142,23 @@ def run(
         if baseline_tags:
             parsed_tags = [tag.strip() for tag in baseline_tags.split(",") if tag.strip()]
 
-        # Run the test
+        # Scaling experiment: run a doubling sequence instead of a single test
+        if cfg.scaling.enabled:
+            sc = cfg.scaling
+            output_path = Path(sc.output_file) if sc.output_file else None
+            scale_command(
+                config=cfg,
+                order_counts=sorted(set(sc.order_counts)),
+                duration_per_step=sc.duration_per_step,
+                monitor_containers=sc.monitor_containers,
+                output_file=output_path,
+                skip_memory=sc.skip_memory,
+                verbose=verbose,
+                prometheus_port=effective_prometheus_port,
+            )
+            return
+
+        # Single fixed-load test
         run_command(
             config=cfg,
             traders=traders,
@@ -366,7 +382,6 @@ def config(
         table.add_row("Chain ID", str(cfg.network.chain_id))
         table.add_row("RPC URL", cfg.network.rpc_url)
         table.add_row("Settlement Contract", cfg.network.settlement_contract)
-        table.add_row("ComposableCow Contract", cfg.network.composable_cow_contract)
         console.print(table)
         console.print()
 
@@ -407,9 +422,6 @@ def config(
         table.add_column("Ratio", style="green")
         table.add_row("Market Orders", f"{cfg.market_order_ratio:.2%}")
         table.add_row("Limit Orders", f"{cfg.limit_order_ratio:.2%}")
-        table.add_row("TWAP Orders", f"{cfg.twap_order_ratio:.2%}")
-        table.add_row("Stop-Loss Orders", f"{cfg.stop_loss_order_ratio:.2%}")
-        table.add_row("Good-After-Time Orders", f"{cfg.good_after_time_order_ratio:.2%}")
         console.print(table)
 
     except FileNotFoundError as e:
@@ -480,106 +492,6 @@ def config_init(
         sys.exit(1)
     except Exception as e:
         console.print(f"\n[bold red]Error:[/bold red] {e}")
-        sys.exit(1)
-
-
-@app.command()
-def scale(
-    order_counts: Optional[str] = typer.Option(
-        None,
-        "--order-counts",
-        "-n",
-        help=(
-            "Comma-separated target order counts for each step. "
-            "Default: 50,100,200,400,800,1600,3200,6400,12800"
-        ),
-    ),
-    duration_per_step: int = typer.Option(
-        120,
-        "--duration-per-step",
-        "-d",
-        help="Duration in seconds for each scaling step (default: 120)",
-    ),
-    config_file: Optional[str] = typer.Option(
-        None, "--config", "-c", help="Path to base configuration file"
-    ),
-    monitor_containers: Optional[str] = typer.Option(
-        None,
-        "--monitor-containers",
-        "-m",
-        help=(
-            "Comma-separated Docker container names to track for RSS memory. "
-            "Default: autopilot,driver,orderbook"
-        ),
-    ),
-    output_file: Optional[str] = typer.Option(
-        None, "--output", "-o", help="Path to write the JSON scaling report"
-    ),
-    skip_memory: bool = typer.Option(
-        False,
-        "--skip-memory",
-        help="Skip Docker memory sampling (useful when Docker is not running locally)",
-    ),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
-) -> None:
-    """Run a scaling experiment across doubling order counts.
-
-    Submits orders at increasing volumes (50 → 12 800 by default) and
-    performs log-log regression to classify backend algorithmic complexity
-    (linear, log-linear, quadratic, etc.) for latency and memory metrics.
-
-    Examples:
-        # Full doubling sequence with defaults
-        cow-perf scale
-
-        # Custom order counts
-        cow-perf scale --order-counts 100,200,400,800
-
-        # Custom config and output
-        cow-perf scale --config my-config.yml --output scaling-report.json
-
-        # Skip memory sampling (when Docker SDK is unavailable)
-        cow-perf scale --skip-memory
-    """
-    parsed_counts = [50, 100, 200, 400, 800, 1600, 3200, 6400, 12800]
-    if order_counts:
-        try:
-            parsed_counts = [int(s.strip()) for s in order_counts.split(",") if s.strip()]
-        except ValueError:
-            console.print(
-                "[bold red]Error:[/bold red] --order-counts must be comma-separated integers"
-            )
-            sys.exit(1)
-
-    parsed_containers = ["autopilot", "driver", "orderbook"]
-    if monitor_containers:
-        parsed_containers = [s.strip() for s in monitor_containers.split(",") if s.strip()]
-
-    output_path = Path(output_file) if output_file else None
-
-    try:
-        cfg = load_config(Path(config_file) if config_file else None)
-        scale_command(
-            config=cfg,
-            order_counts=sorted(set(parsed_counts)),
-            duration_per_step=duration_per_step,
-            monitor_containers=parsed_containers,
-            output_file=output_path,
-            skip_memory=skip_memory,
-            verbose=verbose,
-        )
-    except FileNotFoundError as e:
-        console.print(f"[bold red]Error:[/bold red] {e}")
-        sys.exit(2)
-    except ValueError as e:
-        console.print(f"[bold red]Configuration Error:[/bold red] {e}")
-        sys.exit(3)
-    except Exception as e:
-        console.print(f"[bold red]Error:[/bold red] {e}")
-        if verbose:
-            import traceback
-
-            traceback.print_exc()
         sys.exit(1)
 
 

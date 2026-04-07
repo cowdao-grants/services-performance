@@ -1,8 +1,7 @@
 """
 Order signing utilities for CoW Protocol orders.
 
-This module provides signing functionality for both standard orders (EIP-712)
-and conditional orders (EIP-1271/PRESIGN) used with ComposableCow.
+This module provides signing functionality for standard orders (EIP-712).
 """
 
 from eth_account import Account
@@ -10,10 +9,6 @@ from eth_account.messages import encode_typed_data
 from eth_account.signers.local import LocalAccount
 from web3 import Web3
 
-from .conditional_order_schema import (
-    ConditionalOrder,
-    ConditionalOrderParams,
-)
 from .order_schema import (
     OrderParameters,
     SignedOrder,
@@ -257,159 +252,3 @@ def sign_order_cancellations(
     )
 
     return str("0x" + signed_message.signature.hex())
-
-
-class ConditionalOrderSigner:
-    """
-    Handles signing of conditional orders for ComposableCow.
-
-    Conditional orders (TWAP, Stop-Loss, Good-After-Time) are created through
-    ComposableCow and use different signing mechanisms (EIP-1271 for Safe wallets
-    or PRESIGN for pre-authorized orders).
-    """
-
-    def __init__(
-        self,
-        chain_id: int,
-        composable_cow_contract: str,
-    ):
-        """
-        Initialize the conditional order signer.
-
-        Args:
-            chain_id: The chain ID
-            composable_cow_contract: Address of the ComposableCow contract
-        """
-        self.chain_id = chain_id
-        self.composable_cow_contract = Web3.to_checksum_address(composable_cow_contract)
-
-    def create_conditional_order(
-        self,
-        params: ConditionalOrderParams,
-        owner: str,
-        signing_scheme: SigningScheme = SigningScheme.PRESIGN,
-    ) -> ConditionalOrder:
-        """
-        Create a conditional order ready for submission.
-
-        Conditional orders are typically submitted via Safe wallets using EIP-1271
-        or using PRESIGN where the Safe has pre-authorized the order.
-
-        Args:
-            params: The conditional order parameters (handler, salt, staticInput)
-            owner: The owner address (typically a Safe wallet)
-            signing_scheme: The signing scheme to use (EIP1271 or PRESIGN)
-
-        Returns:
-            A ConditionalOrder ready for submission
-        """
-        return ConditionalOrder(
-            params=params,
-            owner=Web3.to_checksum_address(owner),
-            signingScheme=signing_scheme,
-        )
-
-    def sign_safe_tx(
-        self,
-        safe_address: str,
-        to: str,
-        value: int,
-        data: str,
-        operation: int,
-        safe_tx_gas: int,
-        base_gas: int,
-        gas_price: int,
-        gas_token: str,
-        refund_receiver: str,
-        nonce: int,
-        trader_account: LocalAccount,
-    ) -> str:
-        """
-        Sign a Safe transaction for creating a conditional order.
-
-        This is used when submitting conditional orders through a Safe wallet.
-        The Safe transaction calls ComposableCow.create() with the conditional
-        order parameters.
-
-        Args:
-            safe_address: The Safe wallet address
-            to: The target address (ComposableCow contract)
-            value: ETH value to send (typically 0)
-            data: The encoded function call data
-            operation: Operation type (0 for CALL, 1 for DELEGATECALL)
-            safe_tx_gas: Gas for the Safe transaction
-            base_gas: Base gas cost
-            gas_price: Gas price
-            gas_token: Token used for gas payment (0x0 for ETH)
-            refund_receiver: Address to receive gas refund (0x0 for tx.origin)
-            nonce: Safe nonce
-            trader_account: The account signing the transaction
-
-        Returns:
-            The signature as hex string
-        """
-        # Create Safe transaction hash according to EIP-712
-        domain_separator = self._get_safe_domain_separator(safe_address)
-
-        # Safe transaction type hash
-        safe_tx_typehash = Web3.keccak(
-            text=(
-                "SafeTx(address to,uint256 value,bytes data,uint8 operation,"
-                "uint256 safeTxGas,uint256 baseGas,uint256 gasPrice,"
-                "address gasToken,address refundReceiver,uint256 nonce)"
-            )
-        )
-
-        # Encode the Safe transaction
-        safe_tx_hash = Web3.keccak(
-            b"".join(
-                [
-                    safe_tx_typehash,
-                    bytes.fromhex(to.removeprefix("0x").zfill(64)),
-                    value.to_bytes(32, "big"),
-                    Web3.keccak(bytes.fromhex(data.removeprefix("0x"))),
-                    operation.to_bytes(32, "big"),
-                    safe_tx_gas.to_bytes(32, "big"),
-                    base_gas.to_bytes(32, "big"),
-                    gas_price.to_bytes(32, "big"),
-                    bytes.fromhex(gas_token.removeprefix("0x").zfill(64)),
-                    bytes.fromhex(refund_receiver.removeprefix("0x").zfill(64)),
-                    nonce.to_bytes(32, "big"),
-                ]
-            )
-        )
-
-        # Create final hash with domain separator
-        final_hash = Web3.keccak(b"\x19\x01" + domain_separator + safe_tx_hash)
-
-        # Sign the hash using signHash (internal eth_account method)
-        signed_message = trader_account.signHash(final_hash)  # type: ignore[no-untyped-call]
-        return str(signed_message.signature.hex())
-
-    def _get_safe_domain_separator(self, safe_address: str) -> bytes:
-        """
-        Get the EIP-712 domain separator for a Safe wallet.
-
-        Args:
-            safe_address: The Safe wallet address
-
-        Returns:
-            The domain separator as bytes
-        """
-        # Safe domain type hash
-        domain_typehash = Web3.keccak(
-            text="EIP712Domain(uint256 chainId,address verifyingContract)"
-        )
-
-        # Encode domain separator
-        domain_separator = Web3.keccak(
-            b"".join(
-                [
-                    domain_typehash,
-                    self.chain_id.to_bytes(32, "big"),
-                    bytes.fromhex(safe_address.removeprefix("0x").zfill(64)),
-                ]
-            )
-        )
-
-        return domain_separator

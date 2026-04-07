@@ -49,11 +49,6 @@ def format_metrics_for_prometheus(metrics: dict[str, Any]) -> dict[str, float]:
         flat_metrics["cow_perf_orders_total"] = float(orders.get("total_submitted", 0))
         flat_metrics["cow_perf_orders_market"] = float(orders.get("market_orders", 0))
         flat_metrics["cow_perf_orders_limit"] = float(orders.get("limit_orders", 0))
-        flat_metrics["cow_perf_orders_twap"] = float(orders.get("twap_orders", 0))
-        flat_metrics["cow_perf_orders_stop_loss"] = float(orders.get("stop_loss_orders", 0))
-        flat_metrics["cow_perf_orders_good_after_time"] = float(
-            orders.get("good_after_time_orders", 0)
-        )
 
     # Performance metrics
     if "performance" in metrics:
@@ -149,9 +144,6 @@ def format_metrics_table(metrics: dict[str, Any], console: Console | None = None
         table.add_row("Total Orders", str(orders.get("total_submitted", 0)))
         table.add_row("Market Orders", str(orders.get("market_orders", 0)))
         table.add_row("Limit Orders", str(orders.get("limit_orders", 0)))
-        table.add_row("TWAP Orders", str(orders.get("twap_orders", 0)))
-        table.add_row("Stop-Loss Orders", str(orders.get("stop_loss_orders", 0)))
-        table.add_row("Good-After-Time Orders", str(orders.get("good_after_time_orders", 0)))
 
         console.print(table)
         console.print()

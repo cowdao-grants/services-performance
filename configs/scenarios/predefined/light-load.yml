@@ -32,9 +32,6 @@ base_rate: 30.0  # 30 orders per minute (0.5 orders/sec)
 # Order type distribution (balanced)
 market_order_ratio: 0.5
 limit_order_ratio: 0.5
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 
 # Order amount configuration (optimized for baseline solver)
 # Smaller amounts have better chance of being filled by AMM pools

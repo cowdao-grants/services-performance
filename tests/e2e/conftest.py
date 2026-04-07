@@ -20,7 +20,6 @@ ORDERBOOK_API_URL = os.getenv("ORDERBOOK_API_URL", "http://localhost:8080")
 # Contract addresses on mainnet
 SETTLEMENT_CONTRACT = "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"  # For order signing
 VAULT_RELAYER = "0xC92E8bdf79f0507f65a392b0ab4667716BFE0110"  # For token approvals
-COMPOSABLE_COW_CONTRACT = "0xfdaFc9d1902f4e0b84f65F49f244b32b31013b74"  # For conditional orders
 
 # Token addresses on mainnet
 WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"

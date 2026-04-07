@@ -36,9 +36,6 @@ base_rate: 120.0  # 120 orders per minute (2 orders/sec per trader)
 # Market orders have shorter validity (2 min) and clear faster
 market_order_ratio: 0.9   # Increased to reduce limit order accumulation
 limit_order_ratio: 0.1    # Reduced to avoid TooManyLimitOrders errors
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 
 # Order amount configuration (optimized for profitability with 15% slippage)
 # Using same range as quick-test to ensure orders cover fees and provide solver profit

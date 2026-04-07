@@ -542,3 +542,15 @@ class PrometheusExporter:
         self._metrics.scaling_complexity_slope.labels(
             scenario=self.scenario, metric=metric_name
         ).set(slope)
+
+    def record_rss_snapshot(self, container: str, snapshot: str, rss_bytes: int) -> None:
+        """Record a container RSS memory snapshot for a scaling phase.
+
+        Args:
+            container: Docker container name.
+            snapshot: Either "before" or "after" (relative to the test step).
+            rss_bytes: RSS memory in bytes at the time of capture.
+        """
+        self._metrics.container_rss_snapshot_bytes.labels(
+            scenario=self.scenario, container=container, snapshot=snapshot
+        ).set(rss_bytes)

@@ -43,7 +43,9 @@ class DockerMemorySampler:
         if self._client is None:
             import docker
 
-            self._client = docker.from_env()  # type: ignore[attr-defined]
+            # Use a short read timeout so container.stats(stream=False)
+            # never hangs indefinitely when cgroup stats are slow.
+            self._client = docker.from_env(timeout=10)  # type: ignore[attr-defined]
         return self._client
 
     def capture(self, container_names: list[str]) -> dict[str, MemorySnapshot]:

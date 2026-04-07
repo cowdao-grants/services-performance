@@ -36,9 +36,6 @@ ramp_curve: "exponential"  # Exponential = slow start, rapid finish
 # Order type distribution (mostly market for speed)
 market_order_ratio: 0.8
 limit_order_ratio: 0.2
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 
 # No rate limiting - find the breaking point
 enable_global_rate_limit: false

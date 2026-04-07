@@ -198,30 +198,6 @@ services:
     ports:
       - "9589:9589"    # Metrics
 
-  # Watch-tower service for ComposableCow conditional orders
-  watch-tower:
-    build:
-      context: ./modules/watch-tower
-      dockerfile: Dockerfile
-    restart: always
-    command: ["run", "--config-path", "/config.json"]
-    volumes:
-      - ./configs/watch-tower-config.json:/config.json
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    depends_on:
-      orderbook:
-        condition: service_healthy
-      chain:
-        condition: service_healthy
-    environment:
-      - RUST_LOG=info,watch_tower=debug
-      - LOG_LEVEL=DEBUG
-      - ORDERBOOK_API_URL=http://orderbook:80
-
   # Driver - Translates between autopilot and solvers
   driver:
     build:
@@ -301,12 +277,10 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    profiles:
-      - monitoring
 
   # Grafana - Metrics visualization
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.5.2
     restart: always
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED=true
@@ -327,8 +301,6 @@ services:
         max-file: "3"
     depends_on:
       - prometheus
-    profiles:
-      - monitoring
 
 volumes:
   postgres_data:

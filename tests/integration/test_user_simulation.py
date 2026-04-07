@@ -2,7 +2,7 @@
 Integration tests for user simulation module.
 
 Tests full user simulation with multiple concurrent traders submitting
-all types of orders (market, limit, TWAP, stop-loss, good-after-time).
+market and limit orders.
 """
 
 import asyncio
@@ -10,8 +10,6 @@ import asyncio
 import pytest
 
 from cow_performance.load_generation import (
-    ConditionalOrderFactory,
-    ConditionalOrderSigner,
     OrchestrationConfig,
     OrderFactory,
     OrderSigner,
@@ -37,12 +35,6 @@ def settlement_contract():
 
 
 @pytest.fixture
-def composable_cow_contract():
-    """ComposableCow contract address (Mainnet)."""
-    return "0xfdaFc9d1902f4e0b84f65F49f244b32b31013b74"
-
-
-@pytest.fixture
 def token_registry():
     """Create token registry."""
     return create_mainnet_token_registry()
@@ -60,29 +52,9 @@ def order_factory(token_registry):
 
 
 @pytest.fixture
-def conditional_order_factory(token_registry, chain_id):
-    """Create conditional order factory."""
-    # Use a dummy Safe wallet address for testing
-    dummy_safe_address = "0x0000000000000000000000000000000000000001"
-    return ConditionalOrderFactory(
-        token_pair_registry=token_registry,
-        chain_id=chain_id,
-        safe_wallet_address=dummy_safe_address,
-    )
-
-
-@pytest.fixture
 def order_signer(chain_id, settlement_contract):
     """Create order signer."""
     return OrderSigner(chain_id, settlement_contract)
-
-
-@pytest.fixture
-def conditional_order_signer(chain_id, composable_cow_contract):
-    """Create conditional order signer."""
-    return ConditionalOrderSigner(
-        chain_id=chain_id, composable_cow_contract=composable_cow_contract
-    )
 
 
 @pytest.fixture
@@ -108,9 +80,7 @@ class TestUserSimulationIntegration:
         self,
         trader_pool,
         order_factory,
-        conditional_order_factory,
         order_signer,
-        conditional_order_signer,
         order_tracker,
     ):
         """Test that a single trader can submit orders successfully."""
@@ -119,9 +89,6 @@ class TestUserSimulationIntegration:
             base_rate=60.0,  # 60 orders per minute = 1 per second
             market_order_ratio=0.5,
             limit_order_ratio=0.5,
-            twap_order_ratio=0.0,
-            stop_loss_order_ratio=0.0,
-            good_after_time_order_ratio=0.0,
         )
 
         orchestration_config = OrchestrationConfig(
@@ -133,9 +100,7 @@ class TestUserSimulationIntegration:
         orchestrator = TraderOrchestrator(
             trader_pool=trader_pool,
             order_factory=order_factory,
-            conditional_order_factory=conditional_order_factory,
             order_signer=order_signer,
-            conditional_order_signer=conditional_order_signer,
             order_tracker=order_tracker,
             default_behavior_config=behavior_config,
             orchestration_config=orchestration_config,
@@ -158,9 +123,7 @@ class TestUserSimulationIntegration:
         self,
         trader_pool,
         order_factory,
-        conditional_order_factory,
         order_signer,
-        conditional_order_signer,
         order_tracker,
     ):
         """Test multiple traders running concurrently."""
@@ -169,9 +132,6 @@ class TestUserSimulationIntegration:
             base_rate=30.0,  # 30 orders per minute = 1 every 2 seconds
             market_order_ratio=0.5,
             limit_order_ratio=0.5,
-            twap_order_ratio=0.0,
-            stop_loss_order_ratio=0.0,
-            good_after_time_order_ratio=0.0,
         )
 
         orchestration_config = OrchestrationConfig(
@@ -183,9 +143,7 @@ class TestUserSimulationIntegration:
         orchestrator = TraderOrchestrator(
             trader_pool=trader_pool,
             order_factory=order_factory,
-            conditional_order_factory=conditional_order_factory,
             order_signer=order_signer,
-            conditional_order_signer=conditional_order_signer,
             order_tracker=order_tracker,
             default_behavior_config=behavior_config,
             orchestration_config=orchestration_config,
@@ -209,9 +167,7 @@ class TestUserSimulationIntegration:
         self,
         trader_pool,
         order_factory,
-        conditional_order_factory,
         order_signer,
-        conditional_order_signer,
         order_tracker,
     ):
         """Test burst trading pattern."""
@@ -222,9 +178,6 @@ class TestUserSimulationIntegration:
             quiet_period=2.0,
             market_order_ratio=1.0,
             limit_order_ratio=0.0,
-            twap_order_ratio=0.0,
-            stop_loss_order_ratio=0.0,
-            good_after_time_order_ratio=0.0,
         )
 
         orchestration_config = OrchestrationConfig(
@@ -236,9 +189,7 @@ class TestUserSimulationIntegration:
         orchestrator = TraderOrchestrator(
             trader_pool=trader_pool,
             order_factory=order_factory,
-            conditional_order_factory=conditional_order_factory,
             order_signer=order_signer,
-            conditional_order_signer=conditional_order_signer,
             order_tracker=order_tracker,
             default_behavior_config=behavior_config,
             orchestration_config=orchestration_config,
@@ -256,9 +207,7 @@ class TestUserSimulationIntegration:
         self,
         trader_pool,
         order_factory,
-        conditional_order_factory,
         order_signer,
-        conditional_order_signer,
         order_tracker,
     ):
         """Test random interval trading pattern."""
@@ -268,9 +217,6 @@ class TestUserSimulationIntegration:
             max_interval=2.0,
             market_order_ratio=1.0,
             limit_order_ratio=0.0,
-            twap_order_ratio=0.0,
-            stop_loss_order_ratio=0.0,
-            good_after_time_order_ratio=0.0,
         )
 
         orchestration_config = OrchestrationConfig(
@@ -282,9 +228,7 @@ class TestUserSimulationIntegration:
         orchestrator = TraderOrchestrator(
             trader_pool=trader_pool,
             order_factory=order_factory,
-            conditional_order_factory=conditional_order_factory,
             order_signer=order_signer,
-            conditional_order_signer=conditional_order_signer,
             order_tracker=order_tracker,
             default_behavior_config=behavior_config,
             orchestration_config=orchestration_config,
@@ -302,9 +246,7 @@ class TestUserSimulationIntegration:
         self,
         trader_pool,
         order_factory,
-        conditional_order_factory,
         order_signer,
-        conditional_order_signer,
         order_tracker,
     ):
         """Test graceful shutdown of orchestrator."""
@@ -313,9 +255,6 @@ class TestUserSimulationIntegration:
             base_rate=60.0,
             market_order_ratio=1.0,
             limit_order_ratio=0.0,
-            twap_order_ratio=0.0,
-            stop_loss_order_ratio=0.0,
-            good_after_time_order_ratio=0.0,
         )
 
         orchestration_config = OrchestrationConfig(
@@ -328,9 +267,7 @@ class TestUserSimulationIntegration:
         orchestrator = TraderOrchestrator(
             trader_pool=trader_pool,
             order_factory=order_factory,
-            conditional_order_factory=conditional_order_factory,
             order_signer=order_signer,
-            conditional_order_signer=conditional_order_signer,
             order_tracker=order_tracker,
             default_behavior_config=behavior_config,
             orchestration_config=orchestration_config,
@@ -354,9 +291,7 @@ class TestUserSimulationIntegration:
         self,
         trader_pool,
         order_factory,
-        conditional_order_factory,
         order_signer,
-        conditional_order_signer,
         order_tracker,
     ):
         """Test that generated order signatures are valid."""
@@ -365,9 +300,6 @@ class TestUserSimulationIntegration:
             base_rate=60.0,
             market_order_ratio=0.5,
             limit_order_ratio=0.5,
-            twap_order_ratio=0.0,
-            stop_loss_order_ratio=0.0,
-            good_after_time_order_ratio=0.0,
         )
 
         orchestration_config = OrchestrationConfig(
@@ -379,9 +311,7 @@ class TestUserSimulationIntegration:
         orchestrator = TraderOrchestrator(
             trader_pool=trader_pool,
             order_factory=order_factory,
-            conditional_order_factory=conditional_order_factory,
             order_signer=order_signer,
-            conditional_order_signer=conditional_order_signer,
             order_tracker=order_tracker,
             default_behavior_config=behavior_config,
             orchestration_config=orchestration_config,
@@ -404,11 +334,8 @@ class TestTraderBehaviorConfig:
     def test_valid_config(self):
         """Test that valid config is accepted."""
         config = TraderBehaviorConfig(
-            market_order_ratio=0.4,
-            limit_order_ratio=0.4,
-            twap_order_ratio=0.1,
-            stop_loss_order_ratio=0.05,
-            good_after_time_order_ratio=0.05,
+            market_order_ratio=0.5,
+            limit_order_ratio=0.5,
         )
         assert config is not None
 
@@ -416,11 +343,8 @@ class TestTraderBehaviorConfig:
         """Test that invalid ratio sum raises error."""
         with pytest.raises(ValueError, match="must sum to 1.0"):
             TraderBehaviorConfig(
-                market_order_ratio=0.5,
-                limit_order_ratio=0.5,
-                twap_order_ratio=0.5,  # Total > 1.0
-                stop_loss_order_ratio=0.0,
-                good_after_time_order_ratio=0.0,
+                market_order_ratio=0.3,
+                limit_order_ratio=0.3,
             )
 
     def test_negative_rate_raises_error(self):
@@ -430,9 +354,6 @@ class TestTraderBehaviorConfig:
                 base_rate=-1.0,
                 market_order_ratio=1.0,
                 limit_order_ratio=0.0,
-                twap_order_ratio=0.0,
-                stop_loss_order_ratio=0.0,
-                good_after_time_order_ratio=0.0,
             )
 
 
