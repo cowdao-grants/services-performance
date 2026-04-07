@@ -27,6 +27,75 @@ from .run import run_performance_test
 logger = logging.getLogger(__name__)
 
 _DEFAULT_ORDER_COUNTS = [50, 100, 200, 400, 800, 1600, 3200, 6400, 12800]
+
+# USDT has a non-standard approve() that reverts when setting a non-zero allowance on top of
+# an existing non-zero allowance.  After a settlement that routes through USDT, the GPv2Settlement
+# contract retains a residual allowance for the Uniswap V2 router.  Subsequent settlement
+# attempts call approve(router, MAX) without first resetting to 0 → revert.
+# We reset the allowance via impersonation before each scaling step.
+_USDT_ADDRESS = Web3.to_checksum_address("0xdAC17F958D2ee523a2206206994597C13D831ec7")
+_SETTLEMENT_CONTRACT = Web3.to_checksum_address("0x9008D19f58AAbD9eD0D60971565AA8510560ab41")
+_UNISWAP_V2_ROUTER = Web3.to_checksum_address("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D")
+_USDT_ABI = [
+    {
+        "inputs": [
+            {"name": "_owner", "type": "address"},
+            {"name": "_spender", "type": "address"},
+        ],
+        "name": "allowance",
+        "outputs": [{"name": "", "type": "uint256"}],
+        "type": "function",
+        "stateMutability": "view",
+    },
+    {
+        "inputs": [
+            {"name": "_spender", "type": "address"},
+            {"name": "_value", "type": "uint256"},
+        ],
+        "name": "approve",
+        "outputs": [],
+        "type": "function",
+        "stateMutability": "nonpayable",
+    },
+]
+
+
+def _reset_usdt_allowance(web3: Web3) -> None:
+    """Reset the settlement contract's USDT allowance for the Uniswap V2 router to zero.
+
+    Must be called before each scaling step so that the driver can successfully call
+    approve(router, MAX) during settlement without hitting USDT's non-standard revert.
+    """
+    usdt = web3.eth.contract(address=_USDT_ADDRESS, abi=_USDT_ABI)
+    current = usdt.functions.allowance(_SETTLEMENT_CONTRACT, _UNISWAP_V2_ROUTER).call()
+    if current == 0:
+        return  # Already zero — nothing to do
+
+    from web3.types import Wei
+
+    gas_price = Wei(max(web3.eth.gas_price, 1))
+    web3.provider.make_request("anvil_setBalance", [_SETTLEMENT_CONTRACT, hex(web3.to_wei(1, "ether"))])  # type: ignore[arg-type]
+    web3.provider.make_request("anvil_impersonateAccount", [_SETTLEMENT_CONTRACT])  # type: ignore[arg-type]
+    nonce = web3.eth.get_transaction_count(_SETTLEMENT_CONTRACT)
+    tx_hash = web3.eth.send_transaction(
+        {
+            "from": _SETTLEMENT_CONTRACT,
+            "to": _USDT_ADDRESS,
+            "data": usdt.encodeABI(fn_name="approve", args=[_UNISWAP_V2_ROUTER, 0]),
+            "gas": 100_000,
+            "gasPrice": gas_price,
+            "nonce": nonce,
+        }
+    )
+    web3.provider.make_request("evm_mine", [])  # type: ignore[arg-type]
+    receipt = web3.eth.get_transaction_receipt(tx_hash)
+    web3.provider.make_request("anvil_stopImpersonatingAccount", [_SETTLEMENT_CONTRACT])  # type: ignore[arg-type]
+    if receipt is None or receipt["status"] != 1:
+        logger.warning("USDT allowance reset failed (tx=%s)", tx_hash.hex())
+    else:
+        logger.debug("Reset USDT allowance: %d → 0", current)
+
+
 _DEFAULT_MONITOR_CONTAINERS = ["autopilot", "driver", "orderbook"]
 _METRICS_TO_ANALYZE = [
     "p99_submission_latency_ms",
@@ -219,32 +288,30 @@ def scale_command(
     )
     console.print()
 
+    # Connect to the chain once — needed for wallet funding AND USDT allowance resets.
+    console.print(f"Connecting to RPC at {config.network.rpc_url}...")
+    _web3 = Web3(Web3.HTTPProvider(config.network.rpc_url, request_kwargs={"timeout": 120}))
+    if not _web3.is_connected():
+        console.print(
+            f"[bold red]Error:[/bold red] Cannot connect to RPC at {config.network.rpc_url}"
+        )
+        sys.exit(1)
+    console.print(f"[green]✓[/green] Connected (chain {_web3.eth.chain_id})")
+
+    # Lower the base fee to 1 wei so CoW Protocol quote fees are negligible.
+    # Forked mainnet gas prices cause fees of 100+ WETH per order. Even 1 gwei
+    # is too high for USDC sell orders (6 decimals: 240M units = 240 USDC fee).
+    # 1 wei makes fees effectively zero for all token types.
+    _web3.provider.make_request("anvil_setNextBlockBaseFeePerGas", [hex(1)])  # type: ignore[arg-type]
+    console.print("[green]✓[/green] Base fee set to 1 wei (fees negligible for all tokens)")
+
     # Fund wallets once before the loop so each step reuses the same accounts.
     # Without this, run_performance_test generates fresh wallets every step
     # and funds them, resulting in num_steps × num_traders × num_tokens transactions.
     funded_private_keys: list[str] | None = None
     if config.wallet.funding_enabled:
         num_traders = config.num_traders or config.default_trader_count
-        console.print(f"Connecting to RPC at {config.network.rpc_url}...")
-        _web3 = Web3(Web3.HTTPProvider(config.network.rpc_url, request_kwargs={"timeout": 120}))
-        if not _web3.is_connected():
-            console.print(
-                f"[bold red]Error:[/bold red] Cannot connect to RPC at {config.network.rpc_url}"
-            )
-            sys.exit(1)
-        console.print(
-            f"[green]✓[/green] Connected (chain {_web3.eth.chain_id}). "
-            f"Funding {num_traders} wallets (once for all steps)..."
-        )
-
-        # Lower the base fee to 1 wei so CoW Protocol quote fees are negligible.
-        # Forked mainnet gas prices cause fees of 100+ WETH per order. Even 1 gwei
-        # is too high for USDC sell orders (6 decimals: 240M units = 240 USDC fee).
-        # 1 wei makes fees effectively zero for all token types.
-        _web3.provider.make_request(  # type: ignore[union-attr]
-            "anvil_setNextBlockBaseFeePerGas", [hex(1)]
-        )
-        console.print("[green]✓[/green] Base fee set to 1 wei (fees negligible for all tokens)")
+        console.print(f"Funding {num_traders} wallets (once for all steps)...")
 
         _pool = create_trader_pool_from_config(config.wallet, num_traders)
         fund_trader_pool(
@@ -270,10 +337,12 @@ def scale_command(
         else:
             eta_str = f"  ETA: ~{_fmt_secs(total_est_secs - elapsed)} remaining"
 
-        console.rule(
-            f"[bold]Step {step_idx + 1}/{len(order_counts)}: {order_count} orders[/bold]"
-        )
+        console.rule(f"[bold]Step {step_idx + 1}/{len(order_counts)}: {order_count} orders[/bold]")
         console.print(eta_str)
+
+        # Reset USDT allowance before each step so the driver can re-approve the
+        # Uniswap V2 router without hitting USDT's non-standard approve() revert.
+        _reset_usdt_allowance(_web3)
 
         step_config = _build_step_config(
             config, order_count, duration_per_step, funded_private_keys
@@ -384,4 +453,3 @@ def scale_command(
         except Exception as exc:
             console.print(f"[bold red]Error saving report:[/bold red] {exc}")
             sys.exit(1)
-

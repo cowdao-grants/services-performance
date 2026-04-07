@@ -307,7 +307,7 @@ async def run_performance_test(
         chain_id=config.network.chain_id,
         settlement_contract=config.network.settlement_contract,
         amount_range=amount_range,
-        valid_duration=60,  # 60 seconds for expiration testing
+        valid_duration=180,  # 3 minutes — clears CoW's ~60s minimum; orders expire before next step (inter-step gap = 240s)
         fee_percentage=0.0,  # Zero fees (CoW Protocol calculates fees automatically)
         api_client=api_client,  # Pass API client for getting quotes
     )

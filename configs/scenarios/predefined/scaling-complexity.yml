@@ -32,7 +32,9 @@ base_rate: 60.0          # overridden per-step by the scaling logic
 market_order_ratio: 0.5
 limit_order_ratio: 0.5
 
-# Order amounts — must be large enough to cover gas fees (~0.5 WETH equivalent)
+# Order amounts in native token units (e.g. 5 WETH, 5 DAI).
+# USDC is excluded from this scenario — its 6-decimal fee (~5.2 USDC at fork gas price)
+# would exceed small sell amounts. WETH↔DAI pairs are sufficient for scaling analysis.
 min_order_amount: 5.0
 max_order_amount: 10.0
 
@@ -52,7 +54,7 @@ wallet:
   token_balances:
     WETH: 10000.0   # 10K per trader; all 9 steps combined need ~4300 WETH per trader
     DAI: 10000.0    # 10K per trader via mint (unlimited); no whale balance needed
-    USDC: 10000.0   # 10K per trader × 20 = 200K total from Binance 14 cold wallet
+    # USDC excluded: fee oracle quotes ~5.2 USDC fee > min sell amount at mainnet fork gas price
 
 # ----- Expected outcomes -----------------------------------------------------
 # For a healthy solver the p99 lifecycle latency should grow roughly
