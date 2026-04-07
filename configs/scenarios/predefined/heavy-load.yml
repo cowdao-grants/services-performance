@@ -24,8 +24,8 @@ wallet:
   token_balances:
     WETH: 1000.0    # Increased to support multiple 1-5 WETH orders
     DAI: 10000.0    # Increased proportionally
-    USDC: 10000.0
-    USDT: 10000.0
+    # USDC excluded: 6-decimal fee can exceed sell amounts at any gas price
+    # USDT excluded: non-standard approve() reverts on second settlement batch
 
 # Trading pattern: Constant rate (predictable, sustained load)
 trading_pattern: "constant_rate"

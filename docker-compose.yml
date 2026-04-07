@@ -251,6 +251,102 @@ services:
     ports:
       - "9001:80"      # API & Metrics
 
+  # Instance 2
+  solver-baseline-2:
+    build:
+      context: ./modules/services
+      target: solvers
+    restart: always
+    command: ["baseline", "--config", "/baseline.toml"]
+    environment:
+      - ADDR=0.0.0.0:80
+      - LOG=solvers=trace,shared=info
+      - RUST_BACKTRACE=1
+    volumes:
+      - ./configs/baseline.toml:/baseline.toml
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      chain:
+        condition: service_healthy
+    ports:
+      - "9002:80"
+
+  # Instance 3
+  solver-baseline-3:
+    build:
+      context: ./modules/services
+      target: solvers
+    restart: always
+    command: ["baseline", "--config", "/baseline.toml"]
+    environment:
+      - ADDR=0.0.0.0:80
+      - LOG=solvers=trace,shared=info
+      - RUST_BACKTRACE=1
+    volumes:
+      - ./configs/baseline.toml:/baseline.toml
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      chain:
+        condition: service_healthy
+    ports:
+      - "9003:80"
+
+  # Instance 4
+  solver-baseline-4:
+    build:
+      context: ./modules/services
+      target: solvers
+    restart: always
+    command: ["baseline", "--config", "/baseline.toml"]
+    environment:
+      - ADDR=0.0.0.0:80
+      - LOG=solvers=trace,shared=info
+      - RUST_BACKTRACE=1
+    volumes:
+      - ./configs/baseline.toml:/baseline.toml
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      chain:
+        condition: service_healthy
+    ports:
+      - "9004:80"
+
+  # Instance 5
+  solver-baseline-5:
+    build:
+      context: ./modules/services
+      target: solvers
+    restart: always
+    command: ["baseline", "--config", "/baseline.toml"]
+    environment:
+      - ADDR=0.0.0.0:80
+      - LOG=solvers=trace,shared=info
+      - RUST_BACKTRACE=1
+    volumes:
+      - ./configs/baseline.toml:/baseline.toml
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      chain:
+        condition: service_healthy
+    ports:
+      - "9005:80"
+
   # ===========================================================================
   # Monitoring (Optional)
   # ===========================================================================

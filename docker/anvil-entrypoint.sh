@@ -11,6 +11,7 @@ ANVIL_CMD="/usr/local/bin/anvil \
   --chain-id 1 \
   --block-time 10 \
   --gas-limit 30000000 \
+  --block-base-fee-per-gas 0 \
   --code-size-limit 50000 \
   --accounts 10 \
   --balance 10000 \

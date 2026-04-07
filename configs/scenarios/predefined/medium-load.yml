@@ -22,8 +22,8 @@ wallet:
   token_balances:
     WETH: 10.0
     DAI: 10000.0
-    USDC: 10000.0
-    USDT: 10000.0
+    # USDC excluded: 6-decimal fee can exceed sell amounts at any gas price
+    # USDT excluded: non-standard approve() reverts on second settlement batch
 
 # Trading pattern: Poisson (realistic user behavior)
 trading_pattern: "poisson"

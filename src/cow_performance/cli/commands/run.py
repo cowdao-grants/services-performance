@@ -82,6 +82,9 @@ async def update_prometheus_metrics(
         target_rate: Target orders per second
     """
     start_time = time.time()
+    _WINDOW = 30.0  # seconds for the sliding-window rate estimate
+    # Ring-buffer of (timestamp, cumulative_count) samples
+    _samples: list[tuple[float, int]] = []
 
     while orchestrator._running:
         elapsed = time.time() - start_time
@@ -90,9 +93,20 @@ async def update_prometheus_metrics(
         progress_percent = min(100.0, (elapsed / test_duration) * 100)
         exporter.update_progress(progress_percent)
 
-        # Calculate actual rate
+        # Calculate actual rate over a 30-second sliding window so the
+        # displayed rate reflects current throughput, not the cumulative
+        # average from t=0 (which is inflated by the initial burst).
         total_orders = orchestrator.trader_pool.get_total_orders_submitted()
-        actual_rate = total_orders / elapsed if elapsed > 0 else 0.0
+        now = time.time()
+        _samples.append((now, total_orders))
+        cutoff = now - _WINDOW
+        _samples = [(t, c) for t, c in _samples if t >= cutoff]
+        if len(_samples) >= 2:
+            dt = _samples[-1][0] - _samples[0][0]
+            dc = _samples[-1][1] - _samples[0][1]
+            actual_rate = dc / dt if dt > 0 else 0.0
+        else:
+            actual_rate = total_orders / elapsed if elapsed > 0 else 0.0
 
         # Update throughput metrics
         exporter.update_throughput(
@@ -497,8 +511,8 @@ async def run_performance_test(
                 start_time = datetime.now()
 
                 if prometheus_exporter:
-                    # Calculate target rate from behavior config (orders per minute -> per second)
-                    target_rate = behavior_config.base_rate / 60.0
+                    # Total target rate across all traders (orders/min/trader → orders/sec total)
+                    target_rate = behavior_config.base_rate / 60.0 * num_traders
 
                     # Run orchestrator and metrics update loop concurrently
                     metrics_task = asyncio.create_task(
