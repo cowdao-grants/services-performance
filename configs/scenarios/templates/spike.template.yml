@@ -1,0 +1,90 @@
+# Spike Stress Test Template
+# Sudden burst of load to test system resilience and recovery
+
+template_metadata:
+  name: spike
+  description: Sudden load burst to test system resilience, autoscaling, and recovery
+  parameters:
+    - name: test_name
+      type: string
+      required: false
+      default: "Spike Stress Test"
+      description: "Name of the test scenario"
+    - name: num_traders
+      type: int
+      required: true
+      description: "Number of concurrent traders generating load"
+    - name: duration
+      type: int
+      required: true
+      description: "Total test duration in seconds"
+    - name: normal_rate
+      type: float
+      required: true
+      description: "Normal baseline order rate (orders per minute per trader)"
+    - name: spike_rate
+      type: float
+      required: true
+      description: "Spike order rate (orders per minute per trader) - should be much higher"
+    - name: spike_duration
+      type: float
+      required: false
+      default: 30
+      description: "Duration of the spike in seconds"
+    - name: spike_start
+      type: float
+      required: false
+      default: 60
+      description: "When to start the spike (seconds from test start)"
+    - name: env
+      type: string
+      required: false
+      default: "test"
+      description: "Environment tag"
+
+# Scenario configuration
+name: "${test_name:-Spike Stress Test}"
+description: "Spike from ${normal_rate} to ${spike_rate} orders/min with ${num_traders} traders"
+version: "1.0"
+
+tags:
+  - "${env:-test}"
+  - "spike"
+  - "stress-test"
+  - "resilience"
+
+# Trader configuration
+num_traders: ${num_traders}
+duration: ${duration}
+startup_interval: 0.1
+
+# Order type distribution (favor market orders for maximum load)
+market_order_ratio: 0.7
+limit_order_ratio: 0.3
+twap_order_ratio: 0.0
+stop_loss_order_ratio: 0.0
+good_after_time_order_ratio: 0.0
+
+# Trading pattern - burst to simulate spikes
+trading_pattern: "burst"
+base_rate: ${normal_rate}  # Normal rate between bursts
+
+# Burst configuration (simulates spike behavior)
+burst_size: 10  # Number of orders per burst
+burst_interval: 0.1  # Seconds between orders in burst
+quiet_period: 5.0  # Seconds between bursts
+
+# Note: spike_rate, spike_start, and spike_duration parameters
+# are for documentation/planning but don't directly map to burst pattern config
+
+# Metadata
+metadata:
+  expected_duration_seconds: ${duration}
+  resources:
+    min_memory_gb: 8
+    recommended_memory_gb: 16
+
+# Success criteria (more lenient during spike period)
+success_criteria:
+  min_success_rate: 0.85
+  max_error_rate: 0.15

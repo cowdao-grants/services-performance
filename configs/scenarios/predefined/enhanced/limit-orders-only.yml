@@ -1,0 +1,46 @@
+# Limit Orders Only Scenario
+# Purpose: Test system with only limit orders (no market orders)
+
+name: limit-orders-only
+description: Test system behavior with 100% limit orders
+version: "1.0"
+
+tags:
+  - edge-case
+  - limit-orders
+  - orderbook
+  - medium
+
+metadata:
+  expected_orders: 2700
+  expected_duration_seconds: 600
+  resources:
+    min_memory_gb: 2.0
+    min_cpu_cores: 2
+    recommended_memory_gb: 4.0
+    recommended_cpu_cores: 4
+
+success_criteria:
+  min_success_rate: 0.70  # Lower as many limit orders may not fill
+  max_p95_latency_seconds: 20.0
+  max_error_rate: 0.30  # Higher due to unfilled orders
+  min_throughput_per_second: 3.0
+
+# Test configuration
+num_traders: 15
+duration: 600  # 10 minutes
+startup_interval: 0.1
+
+# Order type distribution - limit orders only
+market_order_ratio: 0.0
+limit_order_ratio: 1.0
+twap_order_ratio: 0.0
+stop_loss_order_ratio: 0.0
+good_after_time_order_ratio: 0.0
+
+# Trading pattern - moderate rate
+trading_pattern: constant_rate
+base_rate: 270.0  # 4.5 orders/second total (15 traders * 0.3 orders/sec each)
+
+# Note: Limit orders will have various price deviations from market
+# Expected: -5% to +5% from market price

@@ -1,0 +1,46 @@
+# High-Frequency Trading Scenario
+# Purpose: Test system under very high submission rate
+
+name: high-frequency
+description: High-frequency trading test with very high order submission rate
+version: "1.0"
+
+tags:
+  - edge-case
+  - high-frequency
+  - stress
+  - short
+
+metadata:
+  expected_orders: 18000
+  expected_duration_seconds: 180
+  resources:
+    min_memory_gb: 8.0
+    min_cpu_cores: 8
+    recommended_memory_gb: 16.0
+    recommended_cpu_cores: 16
+
+success_criteria:
+  min_success_rate: 0.80  # Lower due to extreme load
+  max_p95_latency_seconds: 30.0  # Higher due to queue buildup
+  max_error_rate: 0.20
+  min_throughput_per_second: 80.0  # High throughput target
+
+# Test configuration
+num_traders: 100  # Many concurrent traders
+duration: 180  # 3 minutes
+startup_interval: 0.01  # Fast startup
+
+# Order type distribution - market orders only for speed
+market_order_ratio: 1.0
+limit_order_ratio: 0.0
+twap_order_ratio: 0.0
+stop_loss_order_ratio: 0.0
+good_after_time_order_ratio: 0.0
+
+# Trading pattern - very high rate
+trading_pattern: constant_rate
+base_rate: 6000.0  # 100 orders/second total (100 traders * 1 order/sec each)
+
+# Note: Small order amounts for high-frequency testing
+# Expected range: 0.01-0.1 ETH equivalent per order

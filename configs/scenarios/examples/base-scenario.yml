@@ -1,0 +1,36 @@
+# ============================================
+# BASE SCENARIO
+# ============================================
+# This is a base scenario that other scenarios can extend.
+# Useful for creating a family of related tests.
+#
+# This file defines common settings that child scenarios inherit.
+
+name: "Base Scenario"
+description: "Common configuration for a family of tests"
+
+version: "1.0"
+tags:
+  - base
+  - template
+
+# Common test settings
+num_traders: 5
+duration: 300
+startup_interval: 0.5
+
+# Common trading pattern
+trading_pattern: "constant_rate"
+base_rate: 60.0
+
+# Common order distribution
+market_order_ratio: 0.4
+limit_order_ratio: 0.4
+twap_order_ratio: 0.1
+stop_loss_order_ratio: 0.05
+good_after_time_order_ratio: 0.05
+
+# Common success criteria
+success_criteria:
+  min_success_rate: 0.80
+  max_p95_latency_seconds: 25.0

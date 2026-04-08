@@ -194,38 +194,74 @@ cow-perf scenarios --create-template my-scenario.yml
 cow-perf scenarios --create-template ~/.cow-perf/scenarios/custom-load.yml
 ```
 
+### Interactive Configuration Wizard
+
+The `cow-perf config-init` command provides an interactive wizard to create scenario configurations. This is recommended for new users or when you want guided configuration creation.
+
+**Basic usage:**
+```bash
+# Interactive mode - choose your approach
+cow-perf config-init
+
+# Specify output file
+cow-perf config-init --output my-test.yml
+
+# Quick start mode (minimal questions)
+cow-perf config-init --mode quick --output quick-test.yml
+
+# Template mode (expand from built-in template)
+cow-perf config-init --mode template --output spike-test.yml
+
+# Copy existing mode (customize predefined scenario)
+cow-perf config-init --mode existing --output custom-test.yml
+
+# Advanced mode (full configuration wizard)
+cow-perf config-init --mode advanced --output production-test.yml
+```
+
+**Available modes:**
+
+| Mode | Description | Best For |
+|------|-------------|----------|
+| `interactive` | Let the wizard guide you (default) | First-time users |
+| `quick` | Answer a few basic questions | Simple load tests |
+| `template` | Select and customize a built-in template | Common test patterns |
+| `existing` | Copy and modify a predefined scenario | Customizing known scenarios |
+| `advanced` | Full configuration with all options | Production testing |
+
+**Features:**
+- Validates configuration before saving
+- Shows helpful prompts with defaults
+- Displays next steps after generation
+- Supports all scenario features (success criteria, metadata, etc.)
+
+**Example quick start session:**
+```
+$ cow-perf config-init --mode quick
+
+⚡ Quick Start Mode
+Answer a few questions to create a basic load test.
+
+Scenario name [Scenario]: Load Test
+Description (optional) [Performance test: Load Test]: Testing 10 traders
+Number of concurrent traders [10]: 10
+Test duration (seconds) [60]: 120
+Target orders per minute (per trader) [60.0]: 30.0
+
+Validating configuration...
+✓ Configuration is valid
+
+✓ Configuration saved: scenario.yml
+
+Next Steps:
+  • Review: cat scenario.yml
+  • Validate: cow-perf scenarios --validate scenario.yml
+  • Run: cow-perf run --config scenario.yml
+```
+
 ### Scenario File Structure
 
-```yaml
-# Scenario metadata
-name: "example-scenario"
-description: "Example performance test scenario"
-
-# Trader configuration
-num_traders: 10
-duration: 60  # seconds
-startup_interval: 0.1
-
-# Order type distribution (must sum to 1.0)
-market_order_ratio: 0.4
-limit_order_ratio: 0.4
-twap_order_ratio: 0.1
-stop_loss_order_ratio: 0.05
-good_after_time_order_ratio: 0.05
-
-# Trading pattern
-trading_pattern: "constant_rate"  # constant_rate, burst, or random_interval
-base_rate: 60.0  # orders per minute (for constant_rate)
-
-# Burst pattern parameters (uncomment if using burst pattern)
-# burst_size: 5
-# burst_interval: 0.1
-# quiet_period: 5.0
-
-# Random interval parameters (uncomment if using random_interval)
-# min_interval: 0.5
-# max_interval: 3.0
-```
+See [Configuration Reference](configuration-reference.md) for the complete field schema, descriptions, and examples.
 
 ### Validate Scenario
 
@@ -240,17 +276,7 @@ cow-perf scenarios --validate my-scenario.yml
 
 ### Trading Patterns
 
-**Constant Rate**: Submit orders at a steady rate
-- Best for: Sustained load testing
-- Parameters: `base_rate` (orders per minute)
-
-**Burst**: Submit orders in bursts with quiet periods
-- Best for: Spike testing, simulating trading volatility
-- Parameters: `burst_size`, `burst_interval`, `quiet_period`
-
-**Random Interval**: Submit orders at random intervals
-- Best for: Realistic user behavior simulation
-- Parameters: `min_interval`, `max_interval`
+See [Configuration Reference: Trading Patterns](configuration-reference.md#trading-patterns) for all patterns, their parameters, and usage guidelines.
 
 ---
 

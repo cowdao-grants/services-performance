@@ -212,9 +212,8 @@ class ComparisonEngine:
         # (e.g., going from 0.95 to 0.93 is a 2 percentage point drop)
         absolute_diff = current_value - baseline_value
 
-        # Simple significance check for rates
-        # Consider significant if change is > 1 percentage point
-        is_significant = abs(absolute_diff) > 0.01
+        # Simple significance check for rates: configurable minimum absolute change
+        is_significant = abs(absolute_diff) > self._thresholds.rate_significance
 
         # Classify severity
         severity = self._thresholds.classify_severity(percent_change, metric_type)

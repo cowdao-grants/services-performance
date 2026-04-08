@@ -526,8 +526,8 @@ class TraderOrchestrator:
 
             print("All traders completed")
 
-            # Wait for pending orders to settle
-            if config.settlement_wait_time > 0 and self.api_client is not None:
+            # Wait for pending orders to settle (skip if shutdown was requested)
+            if config.settlement_wait_time > 0 and self.api_client is not None and self._running:
                 print(
                     f"\nWaiting {config.settlement_wait_time:.0f} seconds for "
                     "pending orders to settle..."

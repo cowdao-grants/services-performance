@@ -1,0 +1,113 @@
+# ============================================
+# MULTI-PROFILE EXAMPLE
+# ============================================
+# Single scenario file with multiple profiles for different environments.
+# Demonstrates how to maintain one scenario with environment-specific overrides.
+#
+# Use profiles for:
+# - Dev/staging/production variations
+# - Different team member configurations
+# - Light/medium/heavy test variations
+#
+# Run with profile:
+#   cow-perf run --scenario examples/advanced/multi-profile-example.yml --profile dev
+#   cow-perf run --scenario examples/advanced/multi-profile-example.yml --profile staging
+#   cow-perf run --scenario examples/advanced/multi-profile-example.yml --profile prod
+
+name: "Multi-Profile Example"
+description: "One scenario, multiple environment configurations"
+
+version: "1.0"
+tags:
+  - example
+  - advanced
+  - profiles
+  - multi-environment
+
+# ============================================
+# BASE CONFIGURATION
+# ============================================
+# These are the default values used when no profile is specified
+
+num_traders: 5
+duration: 300
+startup_interval: 0.5
+
+trading_pattern: "constant_rate"
+base_rate: 60.0
+
+market_order_ratio: 0.4
+limit_order_ratio: 0.4
+twap_order_ratio: 0.1
+stop_loss_order_ratio: 0.05
+good_after_time_order_ratio: 0.05
+
+success_criteria:
+  min_success_rate: 0.80
+  max_p95_latency_seconds: 25.0
+
+# ============================================
+# PROFILES
+# ============================================
+# Each profile overrides specific fields for different environments
+
+profiles:
+  # Development profile: Quick, light load
+  dev:
+    num_traders: 2
+    duration: 60  # 1 minute - fast iteration
+    base_rate: 30.0
+    tags:
+      - dev
+      - quick
+    success_criteria:
+      min_success_rate: 0.70  # More lenient in dev
+
+  # Staging profile: Realistic load
+  staging:
+    num_traders: 5
+    duration: 300  # 5 minutes
+    base_rate: 60.0
+    tags:
+      - staging
+      - realistic
+    success_criteria:
+      min_success_rate: 0.80
+
+  # Production-like profile: Full load, strict criteria
+  prod:
+    num_traders: 10
+    duration: 600  # 10 minutes
+    base_rate: 100.0
+    tags:
+      - prod
+      - full-load
+    success_criteria:
+      min_success_rate: 0.85  # Strict in prod-like tests
+      max_p95_latency_seconds: 20.0
+
+  # CI profile: Minimal for continuous integration
+  ci:
+    num_traders: 1
+    duration: 30  # 30 seconds - super fast
+    base_rate: 20.0
+    tags:
+      - ci
+      - minimal
+    success_criteria:
+      min_success_rate: 0.75
+
+# ============================================
+# USAGE
+# ============================================
+# Without profile (uses base configuration):
+#   cow-perf run --scenario examples/advanced/multi-profile-example.yml
+#
+# With dev profile:
+#   cow-perf run --scenario examples/advanced/multi-profile-example.yml --profile dev
+#
+# With staging profile:
+#   cow-perf run --scenario examples/advanced/multi-profile-example.yml --profile staging
+#
+# List available profiles:
+#   cow-perf scenarios --show examples/advanced/multi-profile-example.yml
