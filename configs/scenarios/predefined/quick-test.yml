@@ -10,11 +10,6 @@ tags: ["quick", "validation", "ci-cd"]
 num_traders: 2
 duration: 30  # 30 seconds
 
-# Network settings
-network:
-  chain_id: 1
-  rpc_url: "http://localhost:8545"
-
 # Wallet funding (required for real orderbook testing)
 # Token balances set to support order amounts of 100-500 tokens
 wallet:

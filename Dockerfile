@@ -1,8 +1,6 @@
-FROM debian:bookworm AS chef
+FROM rust:stable-bookworm AS chef
 WORKDIR /src/
-RUN apt-get update && apt-get install -y curl git clang mold libssl-dev pkg-config git make && apt-get clean
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="$PATH:/root/.cargo/bin"
+RUN apt-get update && apt-get install -y git clang mold libssl-dev pkg-config make && apt-get clean
 RUN rustup component add clippy rustfmt
 # configure to use the fast linker
 RUN echo "\
@@ -111,24 +109,3 @@ FROM base AS solvers
 COPY --from=solvers-build /src/target/release/solvers /usr/local/bin/solvers
 ENTRYPOINT [ "solvers" ]
 
-# Extract Binary
-FROM base
-RUN apt-get update && \
-    apt-get install -y build-essential cmake git zlib1g-dev libelf-dev libdw-dev libboost-dev libboost-iostreams-dev libboost-program-options-dev libboost-system-dev libboost-filesystem-dev libunwind-dev libzstd-dev git
-RUN git clone https://invent.kde.org/sdk/heaptrack.git /heaptrack && \
-    mkdir /heaptrack/build && cd /heaptrack/build && \
-    cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_GUI=OFF .. && \
-    make -j$(nproc) && \
-    make install && \
-    cd / && rm -rf /heaptrack
-COPY --from=alerter-build /src/target/release/alerter /usr/local/bin/alerter
-COPY --from=autopilot-build /src/target/release/autopilot /usr/local/bin/autopilot
-COPY --from=driver-build /src/target/release/driver /usr/local/bin/driver
-COPY --from=orderbook-build /src/target/release/orderbook /usr/local/bin/orderbook
-COPY --from=refunder-build /src/target/release/refunder /usr/local/bin/refunder
-COPY --from=solvers-build /src/target/release/solvers /usr/local/bin/solvers
-COPY ./entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["/entrypoint.sh"]

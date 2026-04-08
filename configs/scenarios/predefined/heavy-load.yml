@@ -10,11 +10,6 @@ tags: ["heavy", "stress", "performance"]
 num_traders: 25
 duration: 600  # 10 minutes
 
-# Network settings
-network:
-  chain_id: 1
-  rpc_url: "http://localhost:8545"
-
 # Wallet funding (required for real orderbook testing)
 # Increased balances to support larger order amounts (1-5 tokens per order)
 # With 25 traders and ~120 orders each, need sufficient balance per trader

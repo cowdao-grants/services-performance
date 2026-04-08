@@ -62,11 +62,13 @@ scrape_configs:
           solver_type: "baseline"
 
   # CoW Performance Test Suite metrics
+  # Scrapes the cow-perf container (when started with --profile with-cow-perf)
+  # and falls back to host.docker.internal for local (non-containerized) runs.
   # Note: Only active during test runs with --prometheus-port flag
   - job_name: "cow-performance-test"
     scrape_interval: 5s
     static_configs:
-      - targets: ["host.docker.internal:9091"]
+      - targets: ["cow-perf:9091"]
         labels:
           service: "performance-test"
           component: "cow-perf"
