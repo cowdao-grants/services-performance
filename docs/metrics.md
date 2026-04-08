@@ -1,52 +1,10 @@
 # Metrics Collection Framework
 
-> **Note**: This documentation covers the foundation layer (COW-609). Additional
-> documentation will be added as COW-610 (collection) and COW-611 (aggregation)
-> are completed.
+Complete reference for metrics collection, aggregation, analysis, and export.
 
 ## Overview
 
-The metrics module provides data models, storage, and export functionality for
-capturing performance metrics during CoW Protocol load testing.
-
-## Quick Start
-
-```python
-from cow_performance.metrics import (
-    MetricsStore,
-    OrderMetadata,
-    OrderStatus,
-    APIMetrics,
-    export_store_to_json,
-)
-
-# Create a metrics store
-store = MetricsStore()
-
-# Track an order
-metadata = OrderMetadata(
-    order_uid="0x1234...",
-    owner="0xabcd...",
-    creation_time=time.time(),
-)
-async with store.lock:
-    store.add_order(metadata)
-
-# Record an API call
-api_metric = APIMetrics(
-    endpoint="/api/v1/orders",
-    method="POST",
-    timestamp=time.time(),
-    duration=0.150,  # 150ms
-    status_code=201,
-    payload_size=512,
-)
-async with store.lock:
-    store.add_api_metric(api_metric)
-
-# Export metrics
-json_output = export_store_to_json(store)
-```
+The metrics module provides data models, storage, collection, aggregation, and export for capturing performance metrics during CoW Protocol load testing.
 
 ## Data Models
 
@@ -95,83 +53,437 @@ Complete test run summary combining all metric types.
 
 ## MetricsStore
 
-Thread-safe in-memory storage with:
-
-- **Concurrent access**: Uses `asyncio.Lock` for thread safety
-- **Bounded storage**: Uses `collections.deque` to limit memory
-- **Efficient lookups**: O(1) by order UID
-- **Filtering**: By status, owner, endpoint, container
-
-### Configuration
+Thread-safe in-memory storage with bounded capacity, efficient O(1) lookups, and filtering.
 
 ```python
 from cow_performance.metrics import MetricsStore, MetricsStoreConfig
 
+# Configure limits
 config = MetricsStoreConfig(
-    max_api_metrics_per_endpoint=10000,  # default
-    max_resource_samples_per_container=1000,  # default
-    max_orders=100000,  # default
+    max_orders=100000,
+    max_api_metrics_per_endpoint=10000,
+    max_resource_samples_per_container=1000,
 )
 store = MetricsStore(config)
-```
 
-### Thread-Safe Usage
-
-Always acquire the lock when modifying the store:
-
-```python
-# Safe concurrent writes
+# Thread-safe writes
 async with store.lock:
     store.add_order(metadata)
-
-# Reads don't require lock (but may see stale data)
-orders = store.get_all_orders()
 ```
 
 ## Export
 
-Export to JSON or CSV:
-
 ```python
-from cow_performance.metrics import (
-    export_store_to_json,
-    export_orders_to_csv,
-    export_api_metrics_to_csv,
-    save_metrics_to_file,
-)
+from cow_performance.metrics import export_store_to_json, save_metrics_to_file
 
-# Export to JSON string
 json_str = export_store_to_json(store)
-
-# Export orders to CSV string
-csv_str = export_orders_to_csv(store)
-
-# Save to file
 save_metrics_to_file(store, Path("results.json"), format="json")
 save_metrics_to_file(store, Path("orders.csv"), format="csv_orders")
 ```
 
 ## Testing
 
-Run the metrics tests:
-
 ```bash
-# Unit tests for models
-poetry run pytest tests/unit/test_metrics_models.py -v
-
-# Unit tests for store
-poetry run pytest tests/unit/test_metrics_store.py -v
-
-# Unit tests for export
-poetry run pytest tests/unit/test_metrics_export.py -v
-
-# All metrics tests
 poetry run pytest tests/unit/test_metrics*.py -v
 ```
 
-## Next Steps
+## Metrics Collection
 
-This foundation layer will be extended by:
+### Order Lifecycle
 
-- **COW-610**: Collection - Order lifecycle hooks, API instrumentation, resource monitoring
-- **COW-611**: Analysis - Aggregation, percentiles, real-time streaming
+Tracks: creation, submission, acceptance, fill, completion times.
+
+Status flow: `CREATED → SUBMITTED → ACCEPTED → OPEN → FILLED/EXPIRED/CANCELLED/FAILED`
+
+### API Monitoring
+
+Tracks: endpoint, method, response time, status code, payload sizes, errors.
+
+### Resource Monitoring
+
+Samples: CPU %, memory, network I/O, disk I/O.
+
+**Implementation**: `src/cow_performance/metrics/collection.py`
+
+---
+
+## Aggregation and Analysis
+
+`MetricsAggregator` computes percentile stats (P50, P90, P95, P99) for latencies, response times, and resource usage.
+
+```python
+from cow_performance.metrics import MetricsAggregator
+
+aggregator = MetricsAggregator(metrics_store)
+
+# Per-trader breakdown
+trader_stats = aggregator.aggregate_orders_by_owner()
+
+# Time-series (5-min windows)
+time_series = aggregator.aggregate_orders_by_time_window(300)
+
+# API breakdown
+api_breakdown = aggregator.aggregate_api_metrics_by_endpoint()
+
+# Throughput
+throughput = aggregator.calculate_throughput(start, end, count)
+```
+
+**Implementation**: `src/cow_performance/metrics/aggregator.py`
+
+---
+
+## Prometheus Integration
+
+### Real-Time Metrics Export
+
+Prometheus metrics are automatically exported on port 9091 (default) during test runs:
+
+```bash
+# Metrics available at http://localhost:9091/metrics
+cow-perf run --config scenario.yml
+
+# Custom port
+cow-perf run --config scenario.yml --prometheus-port 9092
+
+# Disable export
+cow-perf run --config scenario.yml --prometheus-port 0
+```
+
+### Available Metrics
+
+**Order Metrics:**
+- `cow_perf_orders_created_total` - Counter
+- `cow_perf_orders_submitted_total` - Counter
+- `cow_perf_orders_filled_total` - Counter
+- `cow_perf_orders_failed_total` - Counter
+- `cow_perf_orders_active` - Gauge
+
+**Latency Histograms:**
+- `cow_perf_submission_latency` - Submission time
+- `cow_perf_orderbook_latency` - Acceptance time
+- `cow_perf_settlement_latency` - Fill time
+- `cow_perf_order_lifecycle` - Total lifecycle
+
+**Throughput:**
+- `cow_perf_orders_per_second` - Gauge
+- `cow_perf_target_rate` - Gauge
+- `cow_perf_actual_rate` - Gauge
+
+**API Metrics:**
+- `cow_perf_api_requests_total{endpoint, method, status}` - Counter
+- `cow_perf_api_response_time{endpoint, method}` - Histogram
+- `cow_perf_api_errors_total{endpoint, error_type}` - Counter
+
+**Resource Metrics (per container):**
+- `cow_perf_container_cpu_percent{container}` - Gauge
+- `cow_perf_container_memory_bytes{container}` - Gauge
+- `cow_perf_container_memory_percent{container}` - Gauge
+- `cow_perf_container_network_rx_bytes{container}` - Gauge
+- `cow_perf_container_network_tx_bytes{container}` - Gauge
+
+**Trader Metrics:**
+- `cow_perf_trader_orders_submitted{trader_index}` - Counter
+- `cow_perf_trader_orders_filled{trader_index}` - Counter
+- `cow_perf_traders_active` - Gauge
+
+**Comparison Metrics:**
+- `cow_perf_baseline_comparison_percent{metric, baseline_id}` - Gauge
+- `cow_perf_regression_detected{severity}` - Gauge
+- `cow_perf_regressions_total{severity}` - Counter
+
+**Chain Reconciliation:**
+- `cow_perf_orders_database_status{scenario, status}` - Gauge
+- `cow_perf_orders_onchain_status{scenario, status}` - Gauge
+- `cow_perf_reconciliation_discrepancy{scenario}` - Gauge
+
+### Grafana Integration
+
+Use with Docker monitoring stack:
+
+```bash
+# Start Prometheus and Grafana
+docker compose --profile monitoring up -d
+
+# Run test (metrics automatically scraped)
+cow-perf run --config scenario.yml
+
+# View dashboards at http://localhost:3000
+```
+
+**Implementation**: `src/cow_performance/prometheus/`
+
+---
+
+## Understanding Test Reports
+
+### Report Structure
+
+Test reports (`~/.cow-perf/results/`) contain:
+
+```json
+{
+  "test_id": "unique-test-identifier",
+  "timestamp": "2026-03-23T10:30:00Z",
+  "scenario_name": "smoke-test",
+  "verdict": "SUCCESS",  // SUCCESS | WARNING | FAILURE
+
+  "orders": {
+    "total_submitted": 232,
+    "orders_filled": 201,
+    "orders_failed": 5,
+    "success_rate": 0.979,  // 97.9%
+    "fill_rate": 0.866       // 86.6%
+  },
+
+  "latency": {
+    "avg_order_latency_ms": 5395.24,
+    "p50_latency_ms": 4823.15,
+    "p95_latency_ms": 7842.33,
+    "p99_latency_ms": 9123.45,
+    "max_latency_ms": 12456.78
+  },
+
+  "throughput": {
+    "orders_per_second": 1.93,
+    "target_rate": 30.0,
+    "actual_rate": 29.2
+  },
+
+  "api_metrics": {
+    "total_requests": 235,
+    "avg_response_time_ms": 145.2,
+    "p95_response_time_ms": 287.5,
+    "error_rate": 0.021
+  },
+
+  "resources": {
+    "orderbook": {
+      "avg_cpu_percent": 45.2,
+      "max_cpu_percent": 78.3,
+      "avg_memory_mb": 512.4
+    }
+  },
+
+  "success_criteria": {
+    "min_success_rate": {"threshold": 0.95, "actual": 0.979, "passed": true},
+    "max_p95_latency": {"threshold": 10.0, "actual": 7.842, "passed": true}
+  }
+}
+```
+
+### Verdict Calculation
+
+**SUCCESS**: All success criteria met
+**WARNING**: Minor issues (soft failures, close to thresholds)
+**FAILURE**: Critical criteria failed
+
+---
+
+## Metric Calculations
+
+### Success Rate
+
+```
+success_rate = (total_submitted - orders_failed) / total_submitted
+```
+
+Example: `(232 - 5) / 232 = 0.979 = 97.9%`
+
+### Fill Rate
+
+```
+fill_rate = orders_filled / total_submitted
+```
+
+Example: `201 / 232 = 0.866 = 86.6%`
+
+**Note**: Fill rate may be 0% during tests in Anvil fork mode. Chain reconciliation updates this post-test.
+
+### Percentiles
+
+Calculated using NumPy's percentile function on order latencies:
+
+- **P50 (median)**: 50% of orders faster than this
+- **P95**: 95% of orders faster than this (outlier threshold)
+- **P99**: 99% of orders faster than this (worst-case excluding extremes)
+
+### Throughput
+
+```
+orders_per_second = total_submitted / test_duration_seconds
+```
+
+Example: `232 orders / 120s = 1.93 orders/second`
+
+### API Response Time
+
+Average across all API calls:
+
+```
+avg_response_time = sum(all_durations) / num_requests
+```
+
+---
+
+## Real-Time Metrics Streaming
+
+### MetricsEventStream
+
+Live metrics updates during test execution:
+
+```python
+from cow_performance.metrics import MetricsEventStream, MetricsEvent
+
+# Create stream
+stream = MetricsEventStream()
+
+# Subscribe to events
+async def handle_metric(event: MetricsEvent):
+    if event.type == "order_filled":
+        print(f"Order filled: {event.data['order_uid']}")
+    elif event.type == "latency_spike":
+        print(f"High latency detected: {event.data['latency_ms']}ms")
+
+stream.subscribe(handle_metric)
+```
+
+### Event Types
+
+- `order_created` - New order generated
+- `order_submitted` - Submitted to API
+- `order_accepted` - Accepted by orderbook
+- `order_filled` - Fill detected
+- `order_failed` - Order failed
+- `latency_spike` - Latency exceeds threshold
+- `api_error` - API request error
+- `resource_alert` - Resource usage high
+
+### CLI Live Display
+
+During test runs, live metrics display updates every 5 seconds:
+
+```
+Running test... [120s remaining]
+Orders: 45 submitted, 42 filled (93.3%)
+Latency: 4.2s avg, 6.8s p95
+Rate: 2.1/s (target: 2.0/s)
+```
+
+**Implementation**: `src/cow_performance/cli/live_display.py`
+
+---
+
+## Storage Management
+
+### Bounded Storage
+
+MetricsStore uses bounded storage to prevent memory exhaustion:
+
+```python
+config = MetricsStoreConfig(
+    max_orders=100000,               # Max orders to keep
+    max_api_metrics_per_endpoint=10000,  # Max API metrics per endpoint
+    max_resource_samples_per_container=1000,  # Max resource samples
+)
+```
+
+### Eviction Strategy
+
+When limits reached:
+- **Orders**: Oldest orders evicted first (FIFO)
+- **API metrics**: Oldest per endpoint evicted
+- **Resource samples**: Oldest samples evicted
+
+### Memory Usage
+
+Approximate memory per item:
+- Order: ~500 bytes
+- API metric: ~200 bytes
+- Resource sample: ~100 bytes
+
+**100k orders = ~50 MB**
+
+### Callbacks on Eviction
+
+Register callbacks to save evicted data:
+
+```python
+def on_order_evicted(order: OrderMetadata):
+    save_to_database(order)
+
+store.register_eviction_callback("order", on_order_evicted)
+```
+
+**Implementation**: `src/cow_performance/metrics/store.py:150-200`
+
+---
+
+## Complete Metrics Catalog
+
+### Core Order Metrics
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `total_submitted` | Counter | Orders submitted to API |
+| `orders_filled` | Counter | Orders fully filled |
+| `orders_partially_filled` | Counter | Orders partially filled |
+| `orders_failed` | Counter | Orders that failed |
+| `orders_expired` | Counter | Orders that expired |
+| `orders_cancelled` | Counter | Orders cancelled by user |
+| `success_rate` | Ratio | (submitted - failed) / submitted |
+| `fill_rate` | Ratio | filled / submitted |
+
+### Latency Metrics
+
+| Metric | Unit | Description |
+|--------|------|-------------|
+| `avg_order_latency_ms` | ms | Average time creation → fill |
+| `p50_latency_ms` | ms | Median order latency |
+| `p95_latency_ms` | ms | 95th percentile latency |
+| `p99_latency_ms` | ms | 99th percentile latency |
+| `max_latency_ms` | ms | Maximum order latency |
+| `submission_latency_ms` | ms | Time to submit to API |
+| `acceptance_latency_ms` | ms | Time for API to accept |
+| `fill_latency_ms` | ms | Time from acceptance to fill |
+
+### API Metrics
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `total_requests` | Counter | Total API requests made |
+| `successful_requests` | Counter | HTTP 2xx responses |
+| `failed_requests` | Counter | HTTP 4xx/5xx responses |
+| `avg_response_time_ms` | ms | Average API response time |
+| `p95_response_time_ms` | ms | 95th percentile API latency |
+| `error_rate` | Ratio | failed / total requests |
+| `timeout_count` | Counter | Request timeouts |
+
+### Resource Metrics (per container)
+
+| Metric | Unit | Description |
+|--------|------|-------------|
+| `cpu_percent` | % | CPU usage (can exceed 100%) |
+| `memory_bytes` | bytes | Memory usage |
+| `memory_percent` | % | Memory as % of limit |
+| `network_rx_bytes` | bytes | Network received |
+| `network_tx_bytes` | bytes | Network transmitted |
+| `disk_read_bytes` | bytes | Disk read |
+| `disk_write_bytes` | bytes | Disk write |
+
+### Throughput Metrics
+
+| Metric | Unit | Description |
+|--------|------|-------------|
+| `orders_per_second` | /s | Actual order submission rate |
+| `target_rate` | /s | Configured target rate |
+| `rate_variance` | % | Deviation from target |
+
+---
+
+## See Also
+
+- [Benchmarking Guide](benchmarking.md)
+- [Reports and Baselines](reports.md)
+- [CLI Reference](cli.md)
+- [Prometheus Integration](../README.md#monitoring)

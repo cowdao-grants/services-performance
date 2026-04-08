@@ -23,7 +23,9 @@
       "Bash(gh pr diff:*)",
       "mcp__linear-server__get_issue",
       "Bash(.venv/bin/python:*)",
-      "Bash(.venv/bin/cow-perf:*)"
+      "Bash(.venv/bin/cow-perf:*)",
+      "Bash(.venv/bin/pip show:*)",
+      "Bash(.venv/bin/ruff check:*)"
     ]
   }
 }

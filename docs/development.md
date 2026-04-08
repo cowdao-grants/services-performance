@@ -7,12 +7,16 @@ This guide covers the development setup, coding standards, testing practices, an
 ### Prerequisites
 
 - Python 3.11 or higher
-- Poetry 1.7.1 or higher
+- Poetry 1.7.1+ **or** venv (choose your preferred dependency manager)
 - Git
 - Docker and Docker Compose (for integration tests)
 - A code editor (VS Code, PyCharm, etc.)
 
 ### Initial Setup
+
+Choose **one** of the following methods:
+
+#### Option A: Using Poetry (Recommended for Development)
 
 1. **Clone the repository:**
    ```bash
@@ -50,6 +54,43 @@ This guide covers the development setup, coding standards, testing practices, an
    ruff check src/ tests/
    mypy src/
    ```
+
+#### Option B: Using venv (Standard Python Virtual Environment)
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/cowprotocol/cow-performance-testing-suite.git
+   cd cow-performance-testing-suite
+   ```
+
+2. **Create and activate virtual environment:**
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install -e ".[dev]"
+   ```
+
+4. **Install pre-commit hooks:**
+   ```bash
+   pre-commit install
+   ```
+
+5. **Verify the setup:**
+   ```bash
+   # Run tests
+   pytest
+
+   # Run linters
+   black --check src/ tests/
+   ruff check src/ tests/
+   mypy src/
+   ```
+
+> **Note**: When using venv, remember to activate the virtual environment (`source .venv/bin/activate`) before running any commands.
 
 ### IDE Configuration
 
@@ -741,9 +782,20 @@ def expensive_function():
 
 ### Building Documentation
 
+**With Poetry:**
 ```bash
 # Install documentation dependencies
 poetry install --with docs
+
+# Build HTML documentation
+cd docs && make html
+```
+
+**With venv:**
+```bash
+# Install documentation dependencies
+source .venv/bin/activate
+pip install -e ".[docs]"
 
 # Build HTML documentation
 cd docs && make html
@@ -753,6 +805,7 @@ cd docs && make html
 
 ### Adding a New Dependency
 
+**With Poetry:**
 ```bash
 # Add runtime dependency
 poetry add package-name
@@ -762,6 +815,21 @@ poetry add --group dev package-name
 
 # Update dependencies
 poetry update
+```
+
+**With venv:**
+```bash
+# Activate virtual environment
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Add dependency to pyproject.toml dependencies section, then:
+pip install -e ".[dev]"
+
+# Or install specific package
+pip install package-name
+
+# Update dependencies
+pip install --upgrade -e ".[dev]"
 ```
 
 ### Creating a New Module
@@ -783,8 +851,9 @@ poetry update
 
 ## Troubleshooting
 
-### Poetry Issues
+### Dependency Issues
 
+**With Poetry:**
 ```bash
 # Clear cache
 poetry cache clear pypi --all
@@ -792,6 +861,20 @@ poetry cache clear pypi --all
 # Reinstall dependencies
 rm -rf .venv poetry.lock
 poetry install
+```
+
+**With venv:**
+```bash
+# Deactivate and remove virtual environment
+deactivate
+rm -rf .venv
+
+# Recreate virtual environment
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Reinstall dependencies
+pip install -e ".[dev]"
 ```
 
 ### Test Failures

@@ -1,9 +1,14 @@
 # CoW Performance Testing Suite Scenario
 # Medium Load: Standard performance test simulating typical production traffic
 
+# Scenario metadata
+name: "Medium Load"
+description: "Standard performance test simulating typical production traffic"
+tags: ["medium", "production", "benchmark"]
+
 # Test configuration
-default_trader_count: 10
-default_duration: 300  # 5 minutes
+num_traders: 10
+duration: 300  # 5 minutes
 
 # Network settings
 network:

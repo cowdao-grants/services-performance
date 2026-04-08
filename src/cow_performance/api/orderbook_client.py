@@ -88,6 +88,7 @@ class OrderbookClient:
         from_address: str,
         kind: str = "sell",
         app_data: str | None = None,
+        validity_seconds: int = 1800,
     ) -> dict[str, Any]:
         """Get a quote for an order with realistic pricing and surplus.
 
@@ -101,6 +102,7 @@ class OrderbookClient:
             from_address: Trader address
             kind: Order kind ("sell" or "buy")
             app_data: Optional appData hash to include in quote request
+            validity_seconds: Order validity duration in seconds (default: 1800 = 30 min)
 
         Returns:
             Quote response with buyAmount, feeAmount, etc.
@@ -115,6 +117,7 @@ class OrderbookClient:
             "from": from_address,
             "kind": kind,
             "priceQuality": "optimal",  # Get best available price
+            "validityBucketSeconds": validity_seconds,  # Specify order validity duration
         }
 
         # Include appData if provided - ensures quote matches order parameters

@@ -42,12 +42,20 @@ docker compose logs -f     # View logs
 | What you need | Read this |
 |---------------|-----------|
 | Get started quickly | `README.md` |
+| End-to-end workflows | `docs/workflows.md` |
 | CLI commands and config | `docs/cli.md` |
 | Development setup | `docs/development.md` |
 | System architecture | `docs/architecture.md` |
 | Order generation API | `docs/order-generation.md` |
 | TWAP, Stop-Loss orders | `docs/conditional-orders.md` |
 | Trader simulation | `docs/user-simulation.md` |
+| Wallet funding | `docs/wallet-funding.md` |
+| Trading patterns | `docs/trading-patterns.md` |
+| Metrics collection | `docs/metrics.md` |
+| Reports and baselines | `docs/reports.md` |
+| Operations and maintenance | `docs/operations.md` |
+| Troubleshooting | `docs/troubleshooting.md` |
+| FAQ | `docs/faq.md` |
 | Contributing | `CONTRIBUTING.md` |
 | Utility scripts | `hack/CLAUDE.md` |
 | Project scope and milestones | `thoughts/context/grant-proposal.md` |

@@ -1,9 +1,14 @@
 # CoW Performance Testing Suite Scenario
 # Ramp-Down Cooldown: Test graceful load reduction and resource cleanup
 
+# Scenario metadata
+name: "Ramp-Down Cooldown"
+description: "Test graceful load reduction and resource cleanup"
+tags: ["ramp-down", "cooldown", "cleanup"]
+
 # Test configuration
-default_trader_count: 5
-default_duration: 300  # 5 minutes
+num_traders: 5
+duration: 300  # 5 minutes
 
 # Network settings
 network:

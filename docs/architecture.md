@@ -155,10 +155,15 @@ The CoW Performance Testing Suite is designed as an independent, Python-based to
 2. Load scenario configuration
    ↓
 3. Initialize components:
-   - Trader pool
+   - Trader pool (with automatic wallet funding if enabled)
    - Order factory
    - Metrics collector
    - Resource monitor
+   ↓
+3a. Fund Wallets (if enabled):
+   - Transfer ETH from Anvil default account
+   - Set token balances via storage slot manipulation
+   - Approve tokens for VaultRelayer contract
    ↓
 4. Execute submission strategy:
    - Generate orders
@@ -194,6 +199,30 @@ Settlement Completion
    ↓
 Aggregation & Export → Prometheus
 ```
+
+### Chain Reconciliation Flow
+
+```
+Test Completion
+  ↓
+Query On-Chain Trade Events
+  ↓
+Extract Filled Orders (from event logs)
+  ↓
+Query Database for Same Orders
+  ↓
+Compare: Database vs On-Chain Status
+  ↓
+Update Database with Correct Statuses
+  ↓
+Update Prometheus Metrics
+  ↓
+Report Discrepancies (if any)
+```
+
+**Purpose**: Resolve event sync issues in Anvil fork mode where `eth_getLogs` doesn't return events from transactions in the same block.
+
+**Implementation**: `src/cow_performance/chain_reconciliation.py`
 
 ## Technology Stack
 

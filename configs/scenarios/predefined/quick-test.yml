@@ -1,9 +1,14 @@
 # CoW Performance Testing Suite Scenario
 # Quick Test: Ultra-fast validation test for rapid iteration
 
+# Scenario metadata
+name: "Quick Test"
+description: "Ultra-fast validation test for rapid iteration and CI/CD"
+tags: ["quick", "validation", "ci-cd"]
+
 # Test configuration
-default_trader_count: 2
-default_duration: 30  # 30 seconds
+num_traders: 2
+duration: 30  # 30 seconds
 
 # Network settings
 network:
@@ -11,11 +16,12 @@ network:
   rpc_url: "http://localhost:8545"
 
 # Wallet funding (required for real orderbook testing)
+# Token balances set to support order amounts of 100-500 tokens
 wallet:
   funding_enabled: true
   eth_balance: 10.0
   token_balances:
-    WETH: 10.0
+    WETH: 1000.0    # Increased to support 100-500 WETH orders
     DAI: 10000.0
     USDC: 10000.0
     USDT: 10000.0
@@ -31,10 +37,13 @@ twap_order_ratio: 0.0
 stop_loss_order_ratio: 0.0
 good_after_time_order_ratio: 0.0
 
-# Order amount configuration (optimized for baseline solver)
-# Small amounts for fast execution with minimal slippage
-min_order_amount: 0.1
-max_order_amount: 1.0
+# Order amount configuration (optimized for fork mode liquidity)
+# Using smaller amounts to match typical CoW Protocol production orders
+# - WETH: 1-5 WETH = $3k-$15k (reasonable retail/small trader size)
+# - Stablecoins: 1000-5000 tokens = $1k-$5k (proportional to WETH value)
+# These amounts should work well with UniswapV2 liquidity in fork mode
+min_order_amount: 1.0
+max_order_amount: 5.0
 
 # No rate limiting needed for quick test
 enable_global_rate_limit: false

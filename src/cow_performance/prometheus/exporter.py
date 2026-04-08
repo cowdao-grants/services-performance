@@ -123,6 +123,8 @@ class PrometheusExporter:
                 self._update_api_metrics(metric)
             elif metric_type == "resource":
                 self._update_resource_metrics(metric)
+            elif metric_type == "uid_rename" and isinstance(metric, tuple) and len(metric) == 2:
+                self._rename_order_uid(str(metric[0]), str(metric[1]))
         except Exception as e:
             logger.warning("Error updating Prometheus metric: %s", e)
 
@@ -185,8 +187,12 @@ class PrometheusExporter:
             self._remove_order_from_trader(trader_index, order.order_uid)
 
         elif status == OrderStatus.EXPIRED:
+            print(
+                f"EXPIRED: order_uid={order.order_uid[:10]}..., was_in_active={order.order_uid in self._active_orders}, active_before={len(self._active_orders)}"
+            )
             self._metrics.orders_expired.labels(scenario=scenario).inc()
             self._active_orders.discard(order.order_uid)
+            print(f"EXPIRED: active_after={len(self._active_orders)}")
             self._remove_order_from_trader(trader_index, order.order_uid)
 
         elif status == OrderStatus.CANCELLED:
@@ -196,6 +202,18 @@ class PrometheusExporter:
 
         # Update active orders gauge
         self._metrics.orders_active.labels(scenario=scenario).set(len(self._active_orders))
+
+    def _rename_order_uid(self, old_uid: str, new_uid: str) -> None:
+        """Update internal UID references after a temp→real UID swap."""
+        if old_uid in self._active_orders:
+            self._active_orders.discard(old_uid)
+            self._active_orders.add(new_uid)
+
+        for order_set in self._orders_by_trader.values():
+            if old_uid in order_set:
+                order_set.discard(old_uid)
+                order_set.add(new_uid)
+                break
 
     def _get_trader_index(self, owner_address: str) -> str:
         """Get or assign a trader index for an address.
@@ -502,3 +520,78 @@ class PrometheusExporter:
         self._metrics.regression_detected.labels(severity="critical").set(critical)
         self._metrics.regression_detected.labels(severity="major").set(major)
         self._metrics.regression_detected.labels(severity="minor").set(minor)
+
+    # --- Chain Reconciliation Methods ---
+
+    def update_from_reconciliation(
+        self,
+        total_orders: int,
+        chain_filled: int,
+        database_filled: int,
+    ) -> None:
+        """Update metrics with accurate on-chain data from reconciliation.
+
+        This corrects Prometheus metrics to reflect actual blockchain state
+        rather than inaccurate database state (relevant in Anvil fork mode).
+
+        Args:
+            total_orders: Total orders submitted during test
+            chain_filled: Orders actually filled on-chain (ground truth)
+            database_filled: Orders reported as filled by database (may be inaccurate)
+        """
+        # Calculate the discrepancy
+        discrepancy = chain_filled - database_filled
+
+        if discrepancy > 0:
+            # Database under-reported fills, add the missing fills
+            logger.info(
+                "Reconciliation: Adding %d missing fills to Prometheus metrics (chain: %d, db: %d)",
+                discrepancy,
+                chain_filled,
+                database_filled,
+            )
+            for _ in range(discrepancy):
+                self._metrics.orders_filled.labels(scenario=self.scenario).inc()
+
+        elif discrepancy < 0:
+            # Database over-reported fills (rare, but handle it)
+            logger.warning(
+                "Reconciliation: Database over-reported fills by %d (chain: %d, db: %d)",
+                abs(discrepancy),
+                chain_filled,
+                database_filled,
+            )
+            # Note: We can't decrement counters in Prometheus, but we log the issue
+
+        # Set gauges with accurate values
+        chain_fill_rate = (chain_filled / total_orders * 100) if total_orders > 0 else 0.0
+        db_fill_rate = (database_filled / total_orders * 100) if total_orders > 0 else 0.0
+        discrepancy_pp = chain_fill_rate - db_fill_rate
+
+        # Update active orders gauge to reflect chain reality
+        chain_unfilled = total_orders - chain_filled
+        self._metrics.orders_active.labels(scenario=self.scenario).set(chain_unfilled)
+
+        # Update database vs on-chain comparison metrics
+        self._metrics.orders_database_status.labels(scenario=self.scenario, status="filled").set(
+            database_filled
+        )
+        self._metrics.orders_database_status.labels(scenario=self.scenario, status="open").set(
+            total_orders - database_filled
+        )
+
+        self._metrics.orders_onchain_status.labels(scenario=self.scenario, status="filled").set(
+            chain_filled
+        )
+        self._metrics.orders_onchain_status.labels(scenario=self.scenario, status="unfilled").set(
+            total_orders - chain_filled
+        )
+
+        self._metrics.reconciliation_discrepancy.labels(scenario=self.scenario).set(discrepancy_pp)
+
+        logger.info(
+            "Reconciliation complete: Chain fill rate: %.1f%%, Database fill rate: %.1f%%, Discrepancy: %.1fpp",
+            chain_fill_rate,
+            db_fill_rate,
+            discrepancy_pp,
+        )

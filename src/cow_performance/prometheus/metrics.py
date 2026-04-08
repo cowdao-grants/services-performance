@@ -273,7 +273,8 @@ class MetricsRegistry:
         )
 
     def _init_comparison_metrics(self) -> None:
-        """Initialize baseline comparison metrics."""
+        """Initialize baseline comparison metrics and reconciliation metrics."""
+        # Baseline comparison metrics
         self.baseline_comparison_percent = Gauge(
             "cow_perf_baseline_comparison_percent",
             "Percentage change from baseline (positive = increase)",
@@ -290,5 +291,25 @@ class MetricsRegistry:
             "cow_perf_regressions_total",
             "Total regressions detected by severity",
             ["severity"],
+            registry=self.registry,
+        )
+
+        # Chain reconciliation metrics (database vs on-chain state)
+        self.orders_database_status = Gauge(
+            "cow_perf_orders_database_status",
+            "Order counts by status as reported by database",
+            ["scenario", "status"],
+            registry=self.registry,
+        )
+        self.orders_onchain_status = Gauge(
+            "cow_perf_orders_onchain_status",
+            "Order counts by status as verified on-chain",
+            ["scenario", "status"],
+            registry=self.registry,
+        )
+        self.reconciliation_discrepancy = Gauge(
+            "cow_perf_reconciliation_discrepancy_percentage_points",
+            "Fill rate discrepancy between database and chain (chain - database)",
+            ["scenario"],
             registry=self.registry,
         )

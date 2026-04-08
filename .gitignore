@@ -148,5 +148,5 @@ docker-compose.override.yml
 #Test Results
 /test-results/
 
-# Private thoughts (not committed)
-thoughts/private/
+#thoughts (not committed)
+/thoughts/*

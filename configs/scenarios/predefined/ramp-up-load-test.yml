@@ -1,9 +1,14 @@
 # CoW Performance Testing Suite Scenario
 # Ramp-Up Load Test: Gradually increase load to test system scaling behavior
 
+# Scenario metadata
+name: "Ramp-Up Load Test"
+description: "Gradually increase load to test system scaling behavior"
+tags: ["ramp-up", "scaling", "performance"]
+
 # Test configuration
-default_trader_count: 5
-default_duration: 300  # 5 minutes
+num_traders: 5
+duration: 300  # 5 minutes
 
 # Network settings
 network:

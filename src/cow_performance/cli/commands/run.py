@@ -28,9 +28,10 @@ from cow_performance.load_generation import (
     create_mainnet_token_registry,
 )
 from cow_performance.load_generation.order_signer import ConditionalOrderSigner
-from cow_performance.metrics import MetricsStore
+from cow_performance.metrics import ExpirationChecker, MetricsStore
 from cow_performance.monitoring import ResourceMonitor, ResourceMonitorConfig
 from cow_performance.prometheus import PrometheusExporter
+from cow_performance.utils.chain_reconciliation import ChainReconciliator
 
 from ..config import PerformanceTestConfig
 from ..output import (
@@ -139,6 +140,11 @@ async def run_performance_test(
     settlement_wait_time = (
         settlement_wait if settlement_wait is not None else 180.0
     )  # Default 3 minutes (sufficient for 120s order validity)
+
+    # Connect to Web3 to get block numbers for reconciliation
+    web3 = Web3(Web3.HTTPProvider(config.network.rpc_url))
+    start_block = 0
+    end_block = 0
 
     if verbose:
         console.print("[bold cyan]Configuration:[/bold cyan]")
@@ -309,7 +315,7 @@ async def run_performance_test(
         chain_id=config.network.chain_id,
         settlement_contract=config.network.settlement_contract,
         amount_range=amount_range,
-        valid_duration=3600,  # 1 hour validity
+        valid_duration=60,  # 60 seconds for expiration testing
         fee_percentage=0.0,  # Zero fees (CoW Protocol calculates fees automatically)
         api_client=api_client,  # Pass API client for getting quotes
     )
@@ -335,6 +341,12 @@ async def run_performance_test(
 
     # Create shared metrics store for all components
     metrics_store = MetricsStore()
+
+    # Create expiration checker for automatic order expiration tracking
+    expiration_checker = ExpirationChecker(
+        metrics_store=metrics_store,
+        check_interval=5.0,  # Check every 5 seconds
+    )
 
     # Start Prometheus exporter if port specified
     prometheus_exporter: PrometheusExporter | None = None
@@ -487,8 +499,15 @@ async def run_performance_test(
             )
 
             try:
+                # Start expiration checker
+                await expiration_checker.start()
+
                 # Start test
                 start_time = datetime.now()
+
+                # Capture start block for reconciliation
+                if web3.is_connected():
+                    start_block = web3.eth.block_number
 
                 if prometheus_exporter:
                     # Calculate target rate from behavior config (orders per minute -> per second)
@@ -514,6 +533,10 @@ async def run_performance_test(
 
                 end_time = datetime.now()
 
+                # Capture end block for reconciliation
+                if web3.is_connected():
+                    end_block = web3.eth.block_number
+
                 progress.update(task, description="[bold green]Test completed!")
 
             except Exception as e:
@@ -521,6 +544,9 @@ async def run_performance_test(
                 console.print(f"\n[bold red]Error:[/bold red] {e}")
                 raise
     finally:
+        # Stop expiration checker
+        await expiration_checker.stop()
+
         # Stop resource monitoring
         if resource_monitor:
             await resource_monitor.stop()
@@ -532,11 +558,13 @@ async def run_performance_test(
     # Get metrics
     metrics = orchestrator.get_metrics()
 
-    # Add timing information
+    # Add timing and block information
     metrics["timing"] = {
         "start_time": start_time.isoformat(),
         "end_time": end_time.isoformat(),
         "duration_seconds": (end_time - start_time).total_seconds(),
+        "start_block": start_block,
+        "end_block": end_block,
     }
 
     # Add configuration info
@@ -579,6 +607,9 @@ async def run_performance_test(
 
     # Also include the actual MetricsStore object for baseline creation
     metrics["_metrics_store_object"] = metrics_store
+
+    # Include prometheus exporter for reconciliation updates
+    metrics["_prometheus_exporter"] = prometheus_exporter
 
     return metrics
 
@@ -637,8 +668,9 @@ def run_command(
             )
         )
 
-        # Extract MetricsStore object before formatting (not JSON serializable)
+        # Extract MetricsStore and PrometheusExporter objects before formatting (not JSON serializable)
         metrics_store_obj = metrics.pop("_metrics_store_object", None)
+        prometheus_exporter_obj = metrics.pop("_prometheus_exporter", None)
 
         # Determine output format
         fmt = output_format or config.output.format
@@ -657,6 +689,86 @@ def run_command(
         else:
             console.print(f"[bold red]Error:[/bold red] Unknown output format: {fmt}")
             sys.exit(1)
+
+        # Run chain reconciliation (always enabled to verify on-chain state)
+        if not dry_run:
+            try:
+                console.print("\n[bold cyan]Chain Reconciliation:[/bold cyan]")
+
+                # Get block range
+                start_block = metrics.get("timing", {}).get("start_block", 0)
+                end_block = metrics.get("timing", {}).get("end_block", 0)
+
+                if start_block == 0 or end_block == 0:
+                    console.print(
+                        "[yellow]⚠ Block numbers not captured, skipping reconciliation[/yellow]"
+                    )
+                elif not metrics_store_obj:
+                    console.print(
+                        "[yellow]⚠ MetricsStore not available, skipping reconciliation[/yellow]"
+                    )
+                else:
+                    # Get submitted order UIDs from metrics store
+                    all_orders = metrics_store_obj.get_all_orders()
+                    submitted_order_uids = {order.order_uid for order in all_orders}
+
+                    # Get database reported filled count
+                    database_filled = metrics.get("orders", {}).get("orders_filled", 0)
+
+                    # Create reconciliator
+                    reconciliator = ChainReconciliator(rpc_url=config.network.rpc_url)
+
+                    console.print(f"  Block range: {start_block} → {end_block}")
+                    console.print(f"  Orders submitted: {len(submitted_order_uids)}")
+                    console.print(f"  Database reported: {database_filled} filled\n")
+
+                    # Run reconciliation
+                    report = reconciliator.reconcile(
+                        from_block=start_block,
+                        to_block=end_block,
+                        submitted_order_uids=submitted_order_uids,
+                        database_filled_count=database_filled,
+                    )
+
+                    # Print report
+                    reconciliator.print_report(report, verbose=use_verbose)
+
+                    # Update database with on-chain trade data
+                    try:
+                        inserted_count = reconciliator.update_database(report)
+                        if inserted_count > 0:
+                            console.print(
+                                f"\n[green]✓[/green] Database updated: {inserted_count} trade records inserted"
+                            )
+                            console.print("  Orders now correctly marked as FILLED in database")
+                        else:
+                            console.print(
+                                "\n[yellow]Note:[/yellow] No new trade records to insert (may already exist)"
+                            )
+                    except Exception as db_error:
+                        console.print(
+                            f"[yellow]Warning:[/yellow] Failed to update database: {db_error}"
+                        )
+                        if use_verbose:
+                            console.print(
+                                "  Database updates failed, but metrics are still accurate from chain query"
+                            )
+
+                    # Update Prometheus metrics with accurate on-chain data
+                    if prometheus_exporter_obj and prometheus_exporter_obj.is_running():
+                        prometheus_exporter_obj.update_from_reconciliation(
+                            total_orders=report.total_orders,
+                            chain_filled=report.chain_filled,
+                            database_filled=report.database_filled,
+                        )
+                        console.print(
+                            "\n[green]✓[/green] Prometheus metrics updated with accurate on-chain data"
+                        )
+
+            except Exception as e:
+                console.print(f"[bold red]Chain reconciliation error:[/bold red] {e}")
+                if use_verbose:
+                    console.print_exception()
 
         # Save results if requested
         should_save = save_results or config.output.save_results or output_file
