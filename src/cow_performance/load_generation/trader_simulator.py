@@ -86,10 +86,7 @@ class TraderBehaviorConfig:
 
     def __post_init__(self) -> None:
         """Validate configuration parameters."""
-        total_ratio = (
-            self.market_order_ratio
-            + self.limit_order_ratio
-        )
+        total_ratio = self.market_order_ratio + self.limit_order_ratio
         if not 0.99 <= total_ratio <= 1.01:  # Allow small floating point errors
             raise ValueError(f"Order type ratios must sum to 1.0, got {total_ratio}")
 

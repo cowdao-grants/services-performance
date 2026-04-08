@@ -374,9 +374,7 @@ async def run_performance_test(
 
         if verbose:
             port_str = str(prometheus_exporter.port)
-            console.print(
-                f"[cyan]Prometheus Exporter:[/cyan] http://localhost:{port_str}/metrics"
-            )
+            console.print(f"[cyan]Prometheus Exporter:[/cyan] http://localhost:{port_str}/metrics")
             console.print()
 
     # Create order tracker with metrics store

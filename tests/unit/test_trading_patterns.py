@@ -256,8 +256,5 @@ class TestOrderTypeRatios:
         )
         assert config.market_order_ratio == 0.6
         assert config.limit_order_ratio == 0.4
-        total = (
-            config.market_order_ratio
-            + config.limit_order_ratio
-        )
+        total = config.market_order_ratio + config.limit_order_ratio
         assert abs(total - 1.0) < 0.01  # Allow small floating point error

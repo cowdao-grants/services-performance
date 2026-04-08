@@ -5,7 +5,7 @@ import logging
 import sys
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from rich.console import Console
 from rich.table import Table
@@ -137,7 +137,7 @@ def _build_step_config(
         )
         update["wallet"] = wallet_update
 
-    return base.model_copy(update=update)
+    return cast(PerformanceTestConfig, base.model_copy(update=update))
 
 
 def _extract_phase_metrics(results: dict[str, Any]) -> dict[str, float]:

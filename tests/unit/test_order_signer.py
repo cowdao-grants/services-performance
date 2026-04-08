@@ -179,5 +179,3 @@ class TestOrderSigner:
         assert signed_order.signature is not None
         is_valid = order_signer.verify_signature(signed_order)
         assert is_valid is True
-
-

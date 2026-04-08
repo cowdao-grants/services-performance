@@ -184,10 +184,7 @@ class ScenarioConfig(BaseModel):
 
     def validate_ratios(self) -> None:
         """Validate that order type ratios sum to 1.0."""
-        total = (
-            self.market_order_ratio
-            + self.limit_order_ratio
-        )
+        total = self.market_order_ratio + self.limit_order_ratio
         if abs(total - 1.0) > 0.001:  # Allow for floating point precision
             raise ValueError(
                 f"Order type ratios must sum to 1.0, got {total}. "

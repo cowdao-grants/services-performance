@@ -8,6 +8,7 @@ from typing import Any
 
 from eth_account.signers.local import LocalAccount
 from web3 import Web3
+from web3.types import Nonce, RPCEndpoint, Wei
 
 from cow_performance.load_generation import TraderPool
 
@@ -25,9 +26,9 @@ TOKEN_ADDRESSES = {
 # USDC: minted via masterMinter → configureMinter → mint() (no whale balance needed).
 # USDT/GNO: Curve 3pool is a large stable holder.
 _WHALE_ADDRESSES: dict[str, str] = {
-    "DAI": "0x9759A6Ac90977b93B58547b4A71c78317f391A28",    # MCD_JOIN_DAI (ward → can mint)
+    "DAI": "0x9759A6Ac90977b93B58547b4A71c78317f391A28",  # MCD_JOIN_DAI (ward → can mint)
     "USDT": "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7",  # Curve 3pool
-    "GNO": "0x4f8AD938ebA0CD19155a835f617317a6E788c868",    # GNO holder
+    "GNO": "0x4f8AD938ebA0CD19155a835f617317a6E788c868",  # GNO holder
 }
 
 # DAI has a mint(address, uint) function restricted to authorized wards.
@@ -132,10 +133,7 @@ def fund_wallet_with_eth(web3: Web3, wallet_address: str, amount_eth: float) -> 
         amount_eth: Amount of ETH to send
     """
     amount_wei = web3.to_wei(amount_eth, "ether")
-    web3.provider.make_request(  # type: ignore[attr-defined]
-        "anvil_setBalance",
-        [wallet_address, hex(amount_wei)],
-    )
+    web3.provider.make_request(RPCEndpoint("anvil_setBalance"), [wallet_address, hex(amount_wei)])
 
 
 def _submit_approve_transaction(
@@ -170,13 +168,13 @@ def _submit_approve_transaction(
     )
 
     if nonce is None:
-        nonce = web3.eth.get_transaction_count(trader_account.address)
+        nonce = web3.eth.get_transaction_count(Web3.to_checksum_address(trader_account.address))
     tx = token_contract.functions.approve(spender, amount_wei).build_transaction(
         {
             "from": trader_account.address,
-            "nonce": nonce,
+            "nonce": Nonce(nonce),
             "gas": 100000,
-            "gasPrice": max(1, web3.eth.gas_price),
+            "gasPrice": Wei(max(1, web3.eth.gas_price)),
         }
     )
 
@@ -243,38 +241,38 @@ def fund_trader_pool(
     # so traders can deposit it into the WETH9 contract.
     for trader in traders:
         total_eth_wei = web3.to_wei(eth_balance, "ether") + weth_amount_wei
-        web3.provider.make_request(  # type: ignore[union-attr]
-            "anvil_setBalance", [trader.address, hex(total_eth_wei)]
+        web3.provider.make_request(
+            RPCEndpoint("anvil_setBalance"), [trader.address, hex(total_eth_wei)]
         )
 
     # Step 2 — submit all token-funding transactions without waiting for mining.
     # Each entry is (description, tx_hash) so failures are easy to diagnose.
     funding_ops: list[tuple[str, Any]] = []
-    gas_price = max(1, web3.eth.gas_price)
+    gas_price: int = max(1, web3.eth.gas_price)
 
     # WETH: each trader deposits their own ETH → WETH
     if weth_amount_wei > 0:
         weth_address = Web3.to_checksum_address(TOKEN_ADDRESSES["WETH"])
         # deposit() selector: keccak256("deposit()") = 0xd0e30db0
         for trader in traders:
-            web3.provider.make_request(  # type: ignore[union-attr]
-                "anvil_impersonateAccount", [trader.address]
+            web3.provider.make_request(RPCEndpoint("anvil_impersonateAccount"), [trader.address])
+            trader_nonce: int = web3.eth.get_transaction_count(
+                Web3.to_checksum_address(trader.address)
             )
-            nonce = web3.eth.get_transaction_count(trader.address)
             tx_hash = web3.eth.send_transaction(
                 {
                     "from": trader.address,
                     "to": weth_address,
-                    "value": weth_amount_wei,
-                    "data": "0xd0e30db0",
+                    "value": Wei(weth_amount_wei),
+                    "data": bytes.fromhex("d0e30db0"),
                     "gas": 60000,
-                    "gasPrice": gas_price,
-                    "nonce": nonce,
+                    "gasPrice": Wei(gas_price),
+                    "nonce": Nonce(trader_nonce),
                 }
             )
             funding_ops.append((f"WETH deposit for {trader.address[:10]}", tx_hash))
-            web3.provider.make_request(  # type: ignore[union-attr]
-                "anvil_stopImpersonatingAccount", [trader.address]
+            web3.provider.make_request(
+                RPCEndpoint("anvil_stopImpersonatingAccount"), [trader.address]
             )
 
     # DAI: impersonate MCD_JOIN_DAI (an authorized ward) and call mint() directly.
@@ -285,12 +283,12 @@ def fund_trader_pool(
         dai_minter = _WHALE_ADDRESSES["DAI"]
         dai_amount_wei = _token_amount_wei("DAI", token_balances["DAI"])
 
-        web3.provider.make_request(  # type: ignore[union-attr]
-            "anvil_setBalance", [dai_minter, hex(web3.to_wei(1, "ether"))]
+        web3.provider.make_request(
+            RPCEndpoint("anvil_setBalance"), [dai_minter, hex(web3.to_wei(1, "ether"))]
         )
-        web3.provider.make_request("anvil_impersonateAccount", [dai_minter])  # type: ignore[union-attr]
+        web3.provider.make_request(RPCEndpoint("anvil_impersonateAccount"), [dai_minter])
 
-        minter_nonce = web3.eth.get_transaction_count(dai_minter)
+        minter_nonce: int = web3.eth.get_transaction_count(Web3.to_checksum_address(dai_minter))
         for trader in traders:
             tx_hash = web3.eth.send_transaction(
                 {
@@ -301,14 +299,14 @@ def fund_trader_pool(
                         args=[Web3.to_checksum_address(trader.address), dai_amount_wei],
                     ),
                     "gas": 100000,
-                    "gasPrice": gas_price,
-                    "nonce": minter_nonce,
+                    "gasPrice": Wei(gas_price),
+                    "nonce": Nonce(minter_nonce),
                 }
             )
             funding_ops.append((f"DAI mint for {trader.address[:10]}", tx_hash))
             minter_nonce += 1
 
-        web3.provider.make_request("anvil_stopImpersonatingAccount", [dai_minter])  # type: ignore[union-attr]
+        web3.provider.make_request(RPCEndpoint("anvil_stopImpersonatingAccount"), [dai_minter])
 
     # USDC: use the FiatToken masterMinter to configure itself as a minter, then
     # call mint() for each trader. This requires a separate evm_mine for the
@@ -319,12 +317,12 @@ def fund_trader_pool(
         usdc_amount_wei = _token_amount_wei("USDC", token_balances["USDC"])
 
         master_minter = usdc_contract.functions.masterMinter().call()
-        web3.provider.make_request(  # type: ignore[union-attr]
-            "anvil_setBalance", [master_minter, hex(web3.to_wei(1, "ether"))]
+        web3.provider.make_request(
+            RPCEndpoint("anvil_setBalance"), [master_minter, hex(web3.to_wei(1, "ether"))]
         )
-        web3.provider.make_request("anvil_impersonateAccount", [master_minter])  # type: ignore[union-attr]
+        web3.provider.make_request(RPCEndpoint("anvil_impersonateAccount"), [master_minter])
 
-        mm_nonce = web3.eth.get_transaction_count(master_minter)
+        mm_nonce: int = web3.eth.get_transaction_count(Web3.to_checksum_address(master_minter))
         # Configure masterMinter itself as a minter with unlimited allowance.
         configure_hash = web3.eth.send_transaction(
             {
@@ -335,13 +333,13 @@ def fund_trader_pool(
                     args=[master_minter, 2**256 - 1],
                 ),
                 "gas": 100000,
-                "gasPrice": gas_price,
-                "nonce": mm_nonce,
+                "gasPrice": Wei(gas_price),
+                "nonce": Nonce(mm_nonce),
             }
         )
         mm_nonce += 1
         # Mine the configure tx before submitting mints — mints will fail if not a minter yet.
-        web3.provider.make_request("evm_mine", [])  # type: ignore[union-attr]
+        web3.provider.make_request(RPCEndpoint("evm_mine"), [])
         configure_receipt = web3.eth.get_transaction_receipt(configure_hash)
         if configure_receipt is None or configure_receipt["status"] != 1:
             raise ValueError("USDC configureMinter failed — cannot mint USDC")
@@ -356,14 +354,14 @@ def fund_trader_pool(
                         args=[Web3.to_checksum_address(trader.address), usdc_amount_wei],
                     ),
                     "gas": 100000,
-                    "gasPrice": gas_price,
-                    "nonce": mm_nonce,
+                    "gasPrice": Wei(gas_price),
+                    "nonce": Nonce(mm_nonce),
                 }
             )
             funding_ops.append((f"USDC mint for {trader.address[:10]}", tx_hash))
             mm_nonce += 1
 
-        web3.provider.make_request("anvil_stopImpersonatingAccount", [master_minter])  # type: ignore[union-attr]
+        web3.provider.make_request(RPCEndpoint("anvil_stopImpersonatingAccount"), [master_minter])
 
     # Other tokens (USDT, GNO): impersonate a whale and transfer.
     # Multiple tokens may share the same whale, so nonces are tracked across the loop.
@@ -382,12 +380,12 @@ def fund_trader_pool(
         token_contract = web3.eth.contract(address=token_address, abi=ERC20_ABI)
 
         if whale not in whale_nonces:
-            web3.provider.make_request(  # type: ignore[union-attr]
-                "anvil_setBalance", [whale, hex(web3.to_wei(1, "ether"))]
+            web3.provider.make_request(
+                RPCEndpoint("anvil_setBalance"), [whale, hex(web3.to_wei(1, "ether"))]
             )
-            whale_nonces[whale] = web3.eth.get_transaction_count(whale)
+            whale_nonces[whale] = web3.eth.get_transaction_count(Web3.to_checksum_address(whale))
 
-        web3.provider.make_request("anvil_impersonateAccount", [whale])  # type: ignore[union-attr]
+        web3.provider.make_request(RPCEndpoint("anvil_impersonateAccount"), [whale])
 
         whale_nonce = whale_nonces[whale]
         for trader in traders:
@@ -400,19 +398,19 @@ def fund_trader_pool(
                         args=[Web3.to_checksum_address(trader.address), amount_wei],
                     ),
                     "gas": 100000,
-                    "gasPrice": gas_price,
-                    "nonce": whale_nonce,
+                    "gasPrice": Wei(gas_price),
+                    "nonce": Nonce(whale_nonce),
                 }
             )
             funding_ops.append((f"{token_symbol} transfer for {trader.address[:10]}", tx_hash))
             whale_nonce += 1
 
         whale_nonces[whale] = whale_nonce
-        web3.provider.make_request("anvil_stopImpersonatingAccount", [whale])  # type: ignore[union-attr]
+        web3.provider.make_request(RPCEndpoint("anvil_stopImpersonatingAccount"), [whale])
 
     # Step 3 — force-mine one block to include all funding transactions
     if funding_ops:
-        web3.provider.make_request("evm_mine", [])  # type: ignore[union-attr]
+        web3.provider.make_request(RPCEndpoint("evm_mine"), [])
         for description, tx_hash in funding_ops:
             receipt = web3.eth.get_transaction_receipt(tx_hash)
             if receipt is None or receipt["status"] != 1:
@@ -423,7 +421,9 @@ def fund_trader_pool(
     approval_hashes: list[Any] = []
     for trader in traders:
         trader_account = trader.get_account()
-        nonce = web3.eth.get_transaction_count(trader_account.address)
+        nonce: int = web3.eth.get_transaction_count(
+            Web3.to_checksum_address(trader_account.address)
+        )
         for token_symbol, amount in token_balances.items():
             if amount > 0:
                 tx_hash = _submit_approve_transaction(
