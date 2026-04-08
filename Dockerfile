@@ -108,4 +108,3 @@ RUN CARGO_PROFILE_RELEASE_DEBUG=1 cargo build --release --package solvers
 FROM base AS solvers
 COPY --from=solvers-build /src/target/release/solvers /usr/local/bin/solvers
 ENTRYPOINT [ "solvers" ]
-
