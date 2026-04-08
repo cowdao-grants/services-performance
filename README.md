@@ -168,7 +168,12 @@ open http://localhost:9090  # Prometheus
 > **No data in Grafana?** Metrics only appear when `--prometheus-port 9091` is passed. Without this flag, no metrics are exported and Grafana panels will show "No data". The `$scenario` dashboard variable is populated from `cow_perf_orders_created_total` labels — it will be empty until at least one test has run with the flag enabled.
 
 **Available dashboards:**
-- CoW Performance Overview - Real-time metrics during test runs
+- **CoW Performance Overview** (`/d/cow-perf-overview`) - Real-time order lifecycle, latency, and submission rate metrics
+- **API Performance** (`/d/cow-perf-api`) - Orderbook API response times and error rates
+- **Resources** (`/d/cow-perf-resources`) - Container CPU and memory usage
+- **Comparison** (`/d/cow-perf-comparison`) - Side-by-side metrics across test runs
+- **Trader Activity** (`/d/cow-perf-traders`) - Per-trader submission and fill rates
+- **Auction Activity** (`/d/cow-perf-auction`) - Auction frequency, orders per auction, filter reasons, solver winners, and order acceptance latency
 
 > **See:** [CLI Reference](docs/cli.md#monitoring--visualization) for detailed setup.
 
