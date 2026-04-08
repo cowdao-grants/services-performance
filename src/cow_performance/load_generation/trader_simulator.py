@@ -414,9 +414,10 @@ class TraderSimulator:
         """Run trading loop with constant rate pattern."""
         end_time = time.time() + duration
 
-        # Spread out first submission across one full interval so all traders
-        # don't hit the orderbook simultaneously (thundering-herd at t=0).
-        initial_jitter = random.uniform(0, self._get_order_interval())
+        # Spread out first submission to prevent thundering-herd at t=0.
+        # Cap at 30% of the interval so short tests are not significantly affected.
+        max_jitter = min(self._get_order_interval() * 0.3, 1.0)
+        initial_jitter = random.uniform(0, max_jitter)
         await asyncio.sleep(min(initial_jitter, end_time - time.time()))
 
         while self._running and time.time() < end_time:
