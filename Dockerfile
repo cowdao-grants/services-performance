@@ -1,4 +1,4 @@
-FROM rust:stable-bookworm AS chef
+FROM rust:bookworm AS chef
 WORKDIR /src/
 RUN apt-get update && apt-get install -y git clang mold libssl-dev pkg-config make && apt-get clean
 RUN rustup component add clippy rustfmt
