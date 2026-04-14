@@ -3,7 +3,7 @@ WORKDIR /src/
 RUN apt-get update && apt-get install -y git clang mold libssl-dev pkg-config make && apt-get clean
 RUN rustup component add clippy rustfmt
 # configure to use the fast linker
-RUN echo "\
+RUN mkdir -p ~/.cargo && echo "\
 [build]\n \
 target = \"$(rustc -Vv | grep host | awk '{print $2}')\"\n \
 rustflags = [\"-C\", \"link-arg=-fuse-ld=/usr/bin/mold\", \"--cfg\", \"tokio_unstable\"]\n \

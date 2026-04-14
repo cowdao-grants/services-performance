@@ -21,8 +21,8 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Poetry
-RUN pip install poetry==${POETRY_VERSION}
+# Install Poetry and export plugin
+RUN pip install poetry==${POETRY_VERSION} poetry-plugin-export
 
 # Set working directory
 WORKDIR /app
@@ -30,8 +30,9 @@ WORKDIR /app
 # Copy dependency files
 COPY pyproject.toml poetry.lock* README.md ./
 
-# Install Python dependencies
-RUN poetry install --no-root --only main
+# Export locked dependencies and install via pip (respects PIP_DEFAULT_TIMEOUT)
+RUN poetry export --without-hashes --only main -f requirements.txt -o /tmp/requirements.txt && \
+    pip install --timeout 300 -r /tmp/requirements.txt
 
 # Copy application code
 COPY src/ ./src/
