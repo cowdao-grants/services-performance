@@ -10,11 +10,6 @@ tags: ["exponential", "stress", "breaking-point"]
 num_traders: 10
 duration: 180  # 3 minutes
 
-# Network settings
-network:
-  chain_id: 1
-  rpc_url: "http://localhost:8545"
-
 # Wallet funding (required for real orderbook testing)
 wallet:
   funding_enabled: true

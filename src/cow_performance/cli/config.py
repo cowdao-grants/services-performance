@@ -19,7 +19,7 @@ class NetworkConfig(BaseSettings):
 
     chain_id: int = Field(default=1, description="Chain ID (1=Mainnet, 100=Gnosis)")
     rpc_url: str = Field(
-        default="https://eth.llamarpc.com",
+        default="http://localhost:8545",
         description="RPC endpoint URL",
     )
     settlement_contract: str = Field(
@@ -573,7 +573,7 @@ def save_config_template(output_path: Path) -> None:
 # Network settings
 network:
   chain_id: 1  # 1=Mainnet, 100=Gnosis Chain
-  rpc_url: "https://eth.llamarpc.com"
+  rpc_url: "http://localhost:8545"
   settlement_contract: "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"
   vault_relayer: "0xC92E8bdf79f0507f65a392b0ab4667716BFE0110"
 

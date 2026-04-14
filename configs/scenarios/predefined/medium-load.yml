@@ -10,11 +10,6 @@ tags: ["medium", "production", "benchmark"]
 num_traders: 10
 duration: 300  # 5 minutes
 
-# Network settings
-network:
-  chain_id: 1
-  rpc_url: "http://localhost:8545"
-
 # Wallet funding (required for real orderbook testing)
 wallet:
   funding_enabled: true

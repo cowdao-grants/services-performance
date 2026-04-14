@@ -42,11 +42,6 @@ max_order_amount: 10.0
 enable_global_rate_limit: false
 enable_per_trader_rate_limit: false
 
-# ----- Network / API ---------------------------------------------------------
-network:
-  chain_id: 1
-  rpc_url: "http://localhost:8545"
-
 # ----- Wallet funding --------------------------------------------------------
 wallet:
   funding_enabled: true

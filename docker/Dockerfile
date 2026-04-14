@@ -6,7 +6,8 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    POETRY_VERSION=1.7.1 \
+    PIP_DEFAULT_TIMEOUT=300 \
+    POETRY_VERSION=2.3.2 \
     POETRY_HOME="/opt/poetry" \
     POETRY_NO_INTERACTION=1 \
     POETRY_VIRTUALENVS_CREATE=false
@@ -16,23 +17,22 @@ ENV PATH="$POETRY_HOME/bin:$PATH"
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    curl \
     git \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Poetry
-RUN curl -sSL https://install.python-poetry.org | python3 - && \
-    chmod +x $POETRY_HOME/bin/poetry
+# Install Poetry and export plugin
+RUN pip install poetry==${POETRY_VERSION} poetry-plugin-export
 
 # Set working directory
 WORKDIR /app
 
 # Copy dependency files
-COPY pyproject.toml poetry.lock* ./
+COPY pyproject.toml poetry.lock* README.md ./
 
-# Install Python dependencies
-RUN poetry install --no-root --only main
+# Export locked dependencies and install via pip (respects PIP_DEFAULT_TIMEOUT)
+RUN poetry export --without-hashes --only main -f requirements.txt -o /tmp/requirements.txt && \
+    pip install --timeout 300 -r /tmp/requirements.txt
 
 # Copy application code
 COPY src/ ./src/

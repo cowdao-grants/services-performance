@@ -398,6 +398,38 @@ services:
     depends_on:
       - prometheus
 
+  # ===========================================================================
+  # CoW Performance Test Runner (profile: with-cow-perf)
+  # ===========================================================================
+  # Start with:  docker compose --profile with-cow-perf up -d
+  # Run a test:  docker compose exec cow-perf cow-perf run \
+  #                --config configs/scenarios/predefined/light-load.yml
+  cow-perf:
+    profiles: ["with-cow-perf"]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    entrypoint: ["sleep", "infinity"]
+    environment:
+      - COW_NETWORK_RPC_URL=http://chain:8545
+      - COW_API_BASE_URL=http://orderbook
+    ports:
+      - "9091:9091"    # Prometheus metrics (exposed during test runs with --prometheus-port 9091)
+    volumes:
+      - ./configs:/app/configs:ro
+      - ./results:/app/results
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      chain:
+        condition: service_healthy
+      orderbook:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   postgres_data:
   prometheus_data:

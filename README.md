@@ -108,6 +108,25 @@ cow-perf run --config configs/scenarios/predefined/light-load.yml \
   --baseline-description "Production baseline"
 ```
 
+### Running in a Container
+
+If you prefer not to install Python/Poetry locally, use the `with-cow-perf` Docker Compose profile. It builds a cow-perf container that joins the same network as the CoW Protocol services automatically.
+
+```bash
+# Start all services including the cow-perf container
+docker compose --profile with-cow-perf up -d
+
+# Run a scenario (no --profile needed, container is already running)
+docker compose exec cow-perf cow-perf run \
+  --config configs/scenarios/predefined/light-load.yml \
+  --prometheus-port 9091
+
+# Show available commands
+docker compose exec cow-perf cow-perf --help
+```
+
+The container connects to `http://chain:8545` and `http://orderbook` automatically via environment variables — no changes to scenario files needed. Results are written to `./results/` on your host machine.
+
 ---
 
 ## Reports & Baselines

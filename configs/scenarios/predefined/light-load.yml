@@ -10,11 +10,6 @@ tags: ["light", "baseline", "health-check"]
 num_traders: 3
 duration: 120  # 2 minutes
 
-# Network settings
-network:
-  chain_id: 1
-  rpc_url: "http://localhost:8545"
-
 # Wallet funding (required for real orderbook testing)
 wallet:
   funding_enabled: true
