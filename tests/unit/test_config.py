@@ -27,7 +27,7 @@ class TestNetworkConfig:
         """Test that default values are set correctly."""
         config = NetworkConfig()
         assert config.chain_id == 1
-        assert config.rpc_url == "https://eth.llamarpc.com"
+        assert config.rpc_url == "http://localhost:8545"
         assert config.settlement_contract == "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"
 
     def test_custom_values(self) -> None:
