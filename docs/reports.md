@@ -18,7 +18,7 @@ The CoW Performance Testing Suite provides powerful baseline management and repo
 
 ```bash
 # Run test and save as baseline
-cow-perf run --config scenario.yml --save-baseline "v1.0"
+cow-perf run --config configs/scenarios/predefined/enhanced/regression-test.yml --save-baseline "v1.0"
 
 # Generate report
 cow-perf report generate v1.0
@@ -233,7 +233,7 @@ cow-perf report generate current --compare baseline
 ```yaml
 - name: Run performance test
   run: |
-    cow-perf run --config scenario.yml --save-baseline current
+    cow-perf run --config configs/scenarios/predefined/enhanced/regression-test.yml --save-baseline current
 
 - name: Compare against baseline
   run: |
@@ -376,12 +376,12 @@ ls .cow-perf/reports/csv/after-optimization/
 ```bash
 # Test against local environment
 export COW_API_BASE_URL=http://localhost:8080
-cow-perf run --config scenario.yml --save-baseline "local" \
+cow-perf run --config configs/scenarios/predefined/enhanced/regression-test.yml --save-baseline "local" \
   --baseline-tags "environment:local"
 
 # Test against staging
 export COW_API_BASE_URL=https://staging-api.cow.fi
-cow-perf run --config scenario.yml --save-baseline "staging" \
+cow-perf run --config configs/scenarios/predefined/enhanced/regression-test.yml --save-baseline "staging" \
   --baseline-tags "environment:staging"
 
 # Compare environments
@@ -413,6 +413,35 @@ All reports, baselines, and results are saved in `.cow-perf/`:
 ```
 
 See `.cow-perf/README.md` in your project directory for detailed documentation on the data structure.
+
+---
+
+## Grafana Comparison Dashboard
+
+The provisioned Grafana comparison dashboard (`CoW Performance — Comparison`) visualizes data from the `cow_perf_baseline_comparison_percent`, `cow_perf_regression_detected`, and `cow_perf_regressions_total` metrics. These metrics are only exported when a comparison is performed with `--prometheus-port 9091`.
+
+**If the dashboard shows empty panels:**
+
+1. Ensure you passed `--prometheus-port 9091` during both baseline runs.
+2. The Prometheus datasource UID must be `prometheus` — this matches the provisioned Grafana datasource in `configs/grafana/provisioning/datasources/`. If you added a custom datasource, update it to use the UID `prometheus` or re-provision.
+3. The `$baseline_id` template variable resolves from `label_values(cow_perf_baseline_comparison_percent, baseline_id)` — it will be empty if no comparison metrics have been scraped yet.
+
+**Intended workflow:**
+```bash
+# 1. Run first test with Prometheus enabled, save baseline
+cow-perf run --config configs/scenarios/predefined/enhanced/regression-test.yml \
+  --prometheus-port 9091 --save-baseline "v1.0"
+
+# 2. Run second test with Prometheus enabled, save as v2.0
+cow-perf run --config configs/scenarios/predefined/enhanced/regression-test.yml \
+  --prometheus-port 9091 --save-baseline "v2.0"
+
+# 3. Generate comparison (exports comparison metrics to Prometheus)
+cow-perf report generate v2.0 --compare v1.0 --prometheus-port 9091
+
+# 4. Open Grafana comparison dashboard — select baseline_id = v2.0
+open http://localhost:3000
+```
 
 ---
 

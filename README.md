@@ -29,7 +29,14 @@ Comprehensive performance testing suite for the CoW Protocol Playground, enablin
    ```bash
    git clone https://github.com/cowprotocol/cow-performance-testing-suite.git
    cd cow-performance-testing-suite
-   poetry install && poetry shell
+   poetry install
+
+   # Activate the virtual environment (Poetry ≥ 2.0)
+   poetry env activate
+   # Note: `poetry shell` was removed in Poetry 2.0. If you have the shell plugin
+   # installed you can still use it, otherwise use `poetry env activate` or run
+   # commands via `poetry run <cmd>`.
+   # With Poetry < 2.0: use `poetry shell` instead of `poetry env activate`.
    ```
 
    **Option B: Using venv** (standard Python virtual environment)
@@ -60,9 +67,12 @@ Comprehensive performance testing suite for the CoW Protocol Playground, enablin
    ```
 
 5. **Run your first test**
+
+   > **Wallet funding required**: Trader wallets need ETH and tokens before orders can be submitted. The Quick Start scenario (`light-load.yml`) includes a `wallet:` block that handles this automatically via Anvil storage manipulation. See [Wallet Funding](docs/wallet-funding.md) for details.
+
    ```bash
-   # Quick 2-minute regression test
-   cow-perf run --config configs/scenarios/predefined/enhanced/regression-test.yml
+   # Light 2-minute load test (wallet funding enabled in scenario config)
+   cow-perf run --config configs/scenarios/predefined/light-load.yml
    ```
 
 ---
@@ -87,22 +97,16 @@ The suite includes 5 production-ready scenarios with automated validation:
 
 ```bash
 # Run a predefined scenario
-cow-perf run --config configs/scenarios/predefined/enhanced/regression-test.yml
+cow-perf run --config configs/scenarios/predefined/light-load.yml
 
 # Run with custom parameters
 cow-perf run --traders 10 --duration 120
 
 # Save results as baseline for comparison
-cow-perf run --config configs/scenarios/predefined/enhanced/regression-test.yml \
+cow-perf run --config configs/scenarios/predefined/light-load.yml \
   --save-baseline "v1.0" \
   --baseline-description "Production baseline"
 ```
-
-### Chain Reconciliation
-
-In Anvil fork mode, database event synchronization is limited. The test suite automatically performs **chain reconciliation** after each test to verify actual on-chain fill rates and update the database.
-
-> **See:** [Known Limitations](#known-limitations) for details on Anvil fork mode.
 
 ---
 
@@ -114,7 +118,7 @@ Save baselines and generate comprehensive reports with regression detection.
 
 ```bash
 # Run test and save as baseline
-cow-perf run --config scenario.yml --save-baseline "v1.0"
+cow-perf run --config configs/scenarios/predefined/light-load.yml --save-baseline "v1.0"
 
 # Generate report
 cow-perf report generate v1.0
@@ -146,23 +150,25 @@ Comparison reports show:
 
 ## Monitoring & Visualization
 
-Prometheus metrics export is **enabled by default** (port 9091). To use the full monitoring stack with Grafana dashboards:
+Prometheus metrics export requires passing `--prometheus-port 9091` to the run command. To use the full monitoring stack with Grafana dashboards:
 
 ```bash
 # Start Prometheus & Grafana
 docker compose --profile monitoring up -d
 
-# Run a test (metrics automatically exported)
-cow-perf run --config scenario.yml
+# Run a test with Prometheus export enabled
+cow-perf run --config configs/scenarios/predefined/light-load.yml \
+  --prometheus-port 9091
 
 # View dashboards
 open http://localhost:3000  # Grafana (admin/admin)
 open http://localhost:9090  # Prometheus
 ```
 
+> **No data in Grafana?** Metrics only appear when `--prometheus-port 9091` is passed. Without this flag, no metrics are exported and Grafana panels will show "No data". The `$scenario` dashboard variable is populated from `cow_perf_orders_created_total` labels — it will be empty until at least one test has run with the flag enabled.
+
 **Available dashboards:**
 - CoW Performance Overview - Real-time metrics during test runs
-- Reconciliation Dashboard - Chain reconciliation and fill rate tracking
 
 > **See:** [CLI Reference](docs/cli.md#monitoring--visualization) for detailed setup.
 
@@ -264,56 +270,37 @@ cow-performance-testing-suite/
 
 ### Anvil Fork Mode - Event Synchronization Issue
 
-**Issue:** In Anvil fork mode, the CoW Protocol services cannot detect settlement events due to missing `debug_traceTransaction` RPC support. This causes database metrics to show 0% fill rate even when settlements are executing successfully on-chain.
+**Issue:** In Anvil fork mode, the CoW Protocol services cannot detect settlement events due to missing `debug_traceTransaction` RPC support. This causes database fill rate metrics to show 0% even when settlements are executing successfully on-chain.
 
 **Impact:**
-- Fill rate metrics show 0% despite actual fills being 50-75%
-- Order statuses remain "open" in database even when filled on-chain
-- Performance metrics are inaccurate during testing
+- Fill rate metrics show 0% despite actual fills being 50–75%
+- Order statuses remain "open" in the database even when filled on-chain
 
-**Root Cause:** Anvil (Foundry's local node) doesn't implement the `debug_traceTransaction` RPC method that autopilot requires for event post-processing. This is a fundamental limitation of Anvil, not a bug in CoW Protocol or this testing suite.
+**Root Cause:** Anvil (Foundry's local node) doesn't implement `debug_traceTransaction`, which autopilot requires for event post-processing. This is a fundamental Anvil limitation, not a bug in CoW Protocol or this suite.
 
-**Solution:** The test suite automatically performs chain reconciliation after every test:
+**Workaround:** Use the on-chain fill counts reported in the test summary output, which are derived directly from chain state rather than the database.
 
-```bash
-# Chain reconciliation runs automatically on every test
-cow-perf run --config my-scenario.yml
-```
+### Understanding Metrics Output
 
-The automatic reconciliation:
-1. Query the settlement contract for Trade events in the test block range
-2. Match events to submitted orders
-3. **Update the database** with accurate trade records
-4. Update Prometheus metrics with accurate on-chain data
-5. Display accurate fill rate comparison:
-   - Database reported (inaccurate)
-   - On-chain reality (accurate)
-   - Discrepancy analysis
+After a test run you will see several counts in the summary output:
 
-**Database Updates:** Chain reconciliation automatically inserts missing trade records into the PostgreSQL database, fixing order statuses to reflect on-chain reality. This prevents stale "unfilled" orders from polluting subsequent auctions.
+| Term | Meaning |
+|------|---------|
+| `total_submitted` | Orders accepted by the CoW Protocol API (HTTP 201). These made it into the orderbook. |
+| `total_tracked` | Orders the test suite monitored, including any that were rejected by the API before submission. |
+| `orders_failed` | Orders that received an API error (4xx/5xx). These were never in the orderbook. |
 
-**Prometheus/Grafana:** After reconciliation completes, Prometheus metrics are automatically updated with the accurate on-chain fill rates, so Grafana dashboards will show correct data.
+> **Why do counts differ?** The API may reject orders (e.g. insufficient balance, invalid token pair). `orders_failed` counts those rejections. `total_submitted` is the count actually sent to the orderbook.
 
-**Example Output:**
-```
-Chain Reconciliation:
-  Block range: 24673430 → 24673700
-  Orders submitted: 8
-  Database reported: 0 filled
+### Expected Fill Rates for Smoke Tests
 
-================================================================================
-CHAIN RECONCILIATION REPORT
-================================================================================
+In Anvil fork mode with default scenarios, partial fills are normal:
 
-📊 Fill Rate Comparison:
-  Database Reports:  0/8 filled (0.0%)
-  On-Chain Reality:  6/8 filled (75.0%)
+- **regression-test** (2 min): expect **50–75% fill rate** (database will show 0%; see Anvil limitation above)
+- **quick-test** (30 sec): expect **10–50%** — short window, solver may not run every batch
+- Fill rates vary run-to-run because Anvil mines blocks on-demand and solver scheduling is non-deterministic
 
-⚠️ Discrepancy: +75.0 percentage points
-  → Database is UNDER-reporting fills by 75.0pp
-```
-
-**Long-term Solution:** A proper fix requires implementing a custom event indexer that works with Anvil's limitations. This is tracked in our internal issue tracker. Chain reconciliation now runs automatically on every test in fork mode to ensure accurate metrics.
+> **For more reproducible results**, pin the fork block: set `ETH_BLOCKNUMBER=<block>` in `.env`. This ensures the same on-chain state across runs, reducing variance in order matching. See `docs/operations.md` for details.
 
 ## Contributing
 

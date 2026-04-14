@@ -2,13 +2,13 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from cow_performance.baselines.models import PerformanceBaseline
 
 
-class ReportVerdict(str, Enum):
+class ReportVerdict(StrEnum):
     """Overall verdict for a performance test."""
 
     SUCCESS = "success"  # All metrics within acceptable thresholds
@@ -16,7 +16,7 @@ class ReportVerdict(str, Enum):
     FAILURE = "failure"  # Critical issues detected
 
 
-class RecommendationSeverity(str, Enum):
+class RecommendationSeverity(StrEnum):
     """Severity level for recommendations."""
 
     CRITICAL = "critical"  # Immediate action required
@@ -24,7 +24,7 @@ class RecommendationSeverity(str, Enum):
     INFO = "info"  # Informational suggestion
 
 
-class RecommendationCategory(str, Enum):
+class RecommendationCategory(StrEnum):
     """Category of recommendation."""
 
     LATENCY = "latency"

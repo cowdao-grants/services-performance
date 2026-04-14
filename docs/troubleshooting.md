@@ -211,9 +211,7 @@ docker exec $(docker ps -qf "name=db") pg_isready -U postgres
   ```
 
 **Error:** Orders not filling (0% fill rate)
-- **Cause:** Normal in Anvil fork mode (events don't sync)
-- **Solution:** Chain reconciliation runs automatically after tests
-- **Verify:** Check test output for "Chain reconciliation complete" message
+- **Cause:** Normal in Anvil fork mode — the database misses settlement events because Anvil lacks `debug_traceTransaction`
 - **See:** [Known Limitations](../README.md#known-limitations)
 
 #### API Connection Issues
@@ -425,7 +423,7 @@ docker compose restart db
 ## Common Questions
 
 **Q: Why do I see 0% fill rate during tests?**
-A: This is expected in Anvil fork mode. Chain reconciliation runs automatically after tests to show actual on-chain fill rate. See [Known Limitations](../README.md#known-limitations).
+A: This is expected in Anvil fork mode — the database misses settlement events because Anvil lacks `debug_traceTransaction`. See [Known Limitations](../README.md#known-limitations).
 
 **Q: How do I know if my test succeeded?**
 A: Check the test report verdict:

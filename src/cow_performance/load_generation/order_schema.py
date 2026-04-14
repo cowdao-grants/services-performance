@@ -5,28 +5,28 @@ This module defines Pydantic models that match CoW Protocol order specifications
 including order kinds, classes, parameters, and signed orders with EIP-712 support.
 """
 
-from enum import Enum
+from enum import StrEnum
 
 from eth_account.messages import encode_typed_data
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from web3 import Web3
 
 
-class OrderKind(str, Enum):
+class OrderKind(StrEnum):
     """Order kind indicating buy or sell side."""
 
     SELL = "sell"
     BUY = "buy"
 
 
-class OrderClass(str, Enum):
+class OrderClass(StrEnum):
     """Order class indicating market or limit order."""
 
     MARKET = "market"
     LIMIT = "limit"
 
 
-class OrderBalance(str, Enum):
+class OrderBalance(StrEnum):
     """Token balance source for orders."""
 
     ERC20 = "erc20"
@@ -34,7 +34,7 @@ class OrderBalance(str, Enum):
     INTERNAL = "internal"
 
 
-class SigningScheme(str, Enum):
+class SigningScheme(StrEnum):
     """Signature scheme for orders."""
 
     EIP712 = "eip712"

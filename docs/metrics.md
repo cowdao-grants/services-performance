@@ -192,10 +192,6 @@ cow-perf run --config scenario.yml --prometheus-port 0
 - `cow_perf_regression_detected{severity}` - Gauge
 - `cow_perf_regressions_total{severity}` - Counter
 
-**Chain Reconciliation:**
-- `cow_perf_orders_database_status{scenario, status}` - Gauge
-- `cow_perf_orders_onchain_status{scenario, status}` - Gauge
-- `cow_perf_reconciliation_discrepancy{scenario}` - Gauge
 
 ### Grafana Integration
 
@@ -298,7 +294,7 @@ fill_rate = orders_filled / total_submitted
 
 Example: `201 / 232 = 0.866 = 86.6%`
 
-**Note**: Fill rate may be 0% during tests in Anvil fork mode. Chain reconciliation updates this post-test.
+**Note**: Fill rate will show 0% in Anvil fork mode because the database cannot detect settlement events (Anvil lacks `debug_traceTransaction`). See [Known Limitations](../README.md#known-limitations).
 
 ### Percentiles
 
