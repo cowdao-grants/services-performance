@@ -50,8 +50,8 @@
       "keepTime": true,
       "tags": [],
       "targetBlank": false,
-      "title": "Comparison",
-      "tooltip": "Go to Comparison Dashboard",
+      "title": "Solver Comparison",
+      "tooltip": "Go to Solver Comparison Dashboard",
       "type": "link",
       "url": "/d/cow-perf-comparison"
     },
