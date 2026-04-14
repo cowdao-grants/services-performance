@@ -14,8 +14,8 @@
       "keepTime": true,
       "tags": [],
       "targetBlank": false,
-      "title": "Overview",
-      "tooltip": "Go to Overview Dashboard",
+      "title": "Performance",
+      "tooltip": "Go to Performance Dashboard",
       "type": "link",
       "url": "/d/cow-perf-overview"
     },
@@ -62,10 +62,10 @@
       "keepTime": true,
       "tags": [],
       "targetBlank": false,
-      "title": "Auction",
-      "tooltip": "Go to Auction Activity Dashboard",
+      "title": "Traders",
+      "tooltip": "Go to Trader Activity Dashboard",
       "type": "link",
-      "url": "/d/cow-perf-auction"
+      "url": "/d/cow-perf-traders"
     }
   ],
   "liveNow": false,
@@ -75,7 +75,7 @@
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
       "id": 1,
       "panels": [],
-      "title": "Overview",
+      "title": "Auction Overview",
       "type": "row"
     },
     {
@@ -86,7 +86,11 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "green", "value": 5 }
+            ]
           },
           "unit": "short"
         },
@@ -95,27 +99,23 @@
       "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
       "id": 2,
       "options": {
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "auto"
       },
-      "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "cow_perf_traders_active",
-          "legendFormat": "Active",
+          "expr": "rate(gp_v2_autopilot_auction_creations[5m]) * 60",
+          "legendFormat": "Auctions/min",
           "refId": "A"
         }
       ],
-      "title": "Active Traders",
+      "title": "Auction Rate",
+      "description": "Auctions run per minute. Expected ~6/min with 10s block time. Drop to 0 indicates autopilot stall.",
       "type": "stat"
     },
     {
@@ -126,9 +126,12 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "purple", "value": null }]
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
           },
-          "unit": "short"
+          "unit": "none",
+          "decimals": 0
         },
         "overrides": []
       },
@@ -139,23 +142,19 @@
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "auto"
       },
-      "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "cow_perf_num_traders{scenario=~\"$scenario\"}",
-          "legendFormat": "Total",
+          "expr": "gp_v2_autopilot_runloop_auction",
+          "legendFormat": "Auction ID",
           "refId": "A"
         }
       ],
-      "title": "Total Traders",
+      "title": "Current Auction ID",
+      "description": "Monotonically increasing. A stalled value indicates the autopilot run loop is stuck.",
       "type": "stat"
     },
     {
@@ -166,10 +165,12 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "blue", "value": null }]
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
           },
-          "unit": "short",
-          "decimals": 1
+          "unit": "none",
+          "decimals": 0
         },
         "overrides": []
       },
@@ -177,26 +178,22 @@
       "id": 4,
       "options": {
         "colorMode": "value",
-        "graphMode": "none",
+        "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "auto"
       },
-      "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(cow_perf_trader_orders_submitted_total) / cow_perf_num_traders{scenario=~\"$scenario\"}",
-          "legendFormat": "Avg",
+          "expr": "gp_v2_autopilot_auction_creations",
+          "legendFormat": "Total Auctions",
           "refId": "A"
         }
       ],
-      "title": "Avg Orders/Trader",
+      "title": "Total Auctions Run",
+      "description": "Cumulative auction count since autopilot started.",
       "type": "stat"
     },
     {
@@ -205,44 +202,39 @@
         "defaults": {
           "color": { "mode": "thresholds" },
           "mappings": [],
-          "max": 100,
-          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "yellow", "value": 50 },
-              { "color": "green", "value": 90 }
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 10 }
             ]
           },
-          "unit": "percent"
+          "unit": "none",
+          "decimals": 0
         },
         "overrides": []
       },
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
       "id": 5,
       "options": {
-        "colorMode": "value",
+        "colorMode": "background",
         "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "auto"
       },
-      "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "(cow_perf_orders_onchain_status{scenario=~\"$scenario\", status=\"filled\"} / (cow_perf_orders_onchain_status{scenario=~\"$scenario\", status=\"filled\"} + cow_perf_orders_onchain_status{scenario=~\"$scenario\", status=\"unfilled\"})) * 100",
-          "legendFormat": "Fill Rate",
+          "expr": "gp_v2_autopilot_runloop_matched_unsettled",
+          "legendFormat": "Unsettled",
           "refId": "A"
         }
       ],
-      "title": "Fill Rate",
+      "title": "Matched But Unsettled",
+      "description": "Orders that appeared in a solver solution but were NOT in the winning solution. Non-zero means orders are being competed over but consistently losing — check solver competition.",
       "type": "stat"
     },
     {
@@ -250,7 +242,7 @@
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
       "id": 6,
       "panels": [],
-      "title": "Top Traders",
+      "title": "Orders Per Auction",
       "type": "row"
     },
     {
@@ -259,22 +251,20 @@
         "defaults": {
           "color": { "mode": "palette-classic" },
           "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
-            "fillOpacity": 80,
-            "gradientMode": "none",
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
             "hideFrom": { "legend": false, "tooltip": false, "viz": false },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": { "type": "linear" },
             "showPoints": "never",
             "spanNulls": false,
-            "stacking": { "group": "A", "mode": "none" },
+            "stacking": { "group": "A", "mode": "normal" },
             "thresholdsStyle": { "mode": "off" }
           },
           "mappings": [],
@@ -290,23 +280,35 @@
       "id": 7,
       "options": {
         "legend": {
-          "calcs": ["lastNotNull"],
+          "calcs": ["mean", "max", "last"],
           "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "topk($top_n, cow_perf_trader_orders_submitted_total)",
-          "legendFormat": "Trader {{trader_index}}",
+          "expr": "gp_v2_autopilot_auction_candidate_orders{class=\"Limit\"}",
+          "legendFormat": "Limit",
           "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "gp_v2_autopilot_auction_candidate_orders{class=\"Market\"}",
+          "legendFormat": "Market",
+          "refId": "B"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "gp_v2_autopilot_auction_candidate_orders{class=\"Liquidity\"}",
+          "legendFormat": "Liquidity",
+          "refId": "C"
         }
       ],
-      "title": "Orders Submitted (Top N)",
+      "title": "Candidate Orders by Class",
+      "description": "Number of orders entering each auction, broken down by order class. Stacked to show total auction size.",
       "type": "timeseries"
     },
     {
@@ -315,17 +317,15 @@
         "defaults": {
           "color": { "mode": "palette-classic" },
           "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
-            "fillOpacity": 80,
-            "gradientMode": "none",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
             "hideFrom": { "legend": false, "tooltip": false, "viz": false },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": { "type": "linear" },
             "showPoints": "never",
@@ -346,32 +346,30 @@
       "id": 8,
       "options": {
         "legend": {
-          "calcs": ["lastNotNull"],
+          "calcs": ["mean", "last"],
           "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "topk($top_n, cow_perf_trader_orders_filled_total)",
-          "legendFormat": "Trader {{trader_index}}",
+          "expr": "sum(gp_v2_autopilot_auction_candidate_orders)",
+          "legendFormat": "Candidate",
           "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(gp_v2_autopilot_auction_solvable_orders)",
+          "legendFormat": "Solvable",
+          "refId": "B"
         }
       ],
-      "title": "Orders Filled (Top N)",
+      "title": "Candidate vs Solvable Orders",
+      "description": "Gap between candidate and solvable = orders filtered out before solving. A persistent gap indicates balance issues, missing prices, or out-of-market limit orders.",
       "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
-      "id": 9,
-      "panels": [],
-      "title": "Activity",
-      "type": "row"
     },
     {
       "datasource": { "type": "prometheus", "uid": "prometheus" },
@@ -379,16 +377,14 @@
         "defaults": {
           "color": { "mode": "palette-classic" },
           "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
             "fillOpacity": 10,
-            "gradientMode": "none",
+            "gradientMode": "opacity",
             "hideFrom": { "legend": false, "tooltip": false, "viz": false },
-            "lineInterpolation": "smooth",
+            "lineInterpolation": "stepAfter",
             "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": { "type": "linear" },
@@ -406,28 +402,101 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
-      "id": 10,
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 14 },
+      "id": 9,
       "options": {
         "legend": {
-          "calcs": ["mean", "max"],
+          "calcs": ["mean", "max", "last"],
           "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "cow_perf_traders_active",
-          "legendFormat": "Active Traders",
+          "expr": "gp_v2_autopilot_auction_filtered_orders{reason=\"insufficient_balance\"}",
+          "legendFormat": "Insufficient Balance",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "gp_v2_autopilot_auction_filtered_orders{reason=\"out_of_market\"}",
+          "legendFormat": "Out of Market",
+          "refId": "B"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "gp_v2_autopilot_auction_filtered_orders{reason=\"missing_price\"}",
+          "legendFormat": "Missing Price",
+          "refId": "C"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "gp_v2_autopilot_auction_filtered_orders{reason=\"dust_order\"}",
+          "legendFormat": "Dust Order",
+          "refId": "D"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "gp_v2_autopilot_auction_filtered_orders{reason=\"other\"}",
+          "legendFormat": "Other",
+          "refId": "E"
+        }
+      ],
+      "title": "Filtered Orders by Reason",
+      "description": "Orders excluded from auctions by reason. These orders are accepted by the orderbook but cannot be solved. 'Out of market' is normal for limit orders; 'insufficient_balance' or 'missing_price' indicate configuration issues.",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 22 },
+      "id": 10,
+      "panels": [],
+      "title": "Settlement & Timing",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.5 },
+              { "color": "green", "value": 0.9 }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 23 },
+      "id": 11,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rate(gp_v2_autopilot_runloop_auction_winners_sum[5m]) / rate(gp_v2_autopilot_runloop_auction_winners_count[5m])",
+          "legendFormat": "Winners/Auction",
           "refId": "A"
         }
       ],
-      "title": "Active Traders Over Time",
-      "type": "timeseries"
+      "title": "Winners per Auction (avg)",
+      "description": "Average number of winning solver solutions per auction. Should be 1.0 under normal operation. Drops to 0 when auctions run but no solution is found (no orders to settle or solver failure).",
+      "type": "stat"
     },
     {
       "datasource": { "type": "prometheus", "uid": "prometheus" },
@@ -435,14 +504,12 @@
         "defaults": {
           "color": { "mode": "palette-classic" },
           "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
             "fillOpacity": 10,
-            "gradientMode": "none",
+            "gradientMode": "opacity",
             "hideFrom": { "legend": false, "tooltip": false, "viz": false },
             "lineInterpolation": "smooth",
             "lineWidth": 2,
@@ -458,12 +525,12 @@
             "mode": "absolute",
             "steps": [{ "color": "green", "value": null }]
           },
-          "unit": "ops"
+          "unit": "s"
         },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
-      "id": 11,
+      "gridPos": { "h": 8, "w": 18, "x": 6, "y": 23 },
+      "id": 12,
       "options": {
         "legend": {
           "calcs": ["mean", "max"],
@@ -473,183 +540,113 @@
         },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "topk($top_n, rate(cow_perf_trader_orders_submitted_total[1m]))",
-          "legendFormat": "Trader {{trader_index}}",
+          "expr": "rate(gp_v2_autopilot_auction_overhead_time{phase=\"maintenance_total\"}[1m])",
+          "legendFormat": "Maintenance Total",
           "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rate(gp_v2_autopilot_auction_overhead_time{phase=\"settlement_indexer\"}[1m])",
+          "legendFormat": "Settlement Indexer",
+          "refId": "B"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rate(gp_v2_autopilot_auction_overhead_time{phase=\"update_solvabe_orders\"}[1m])",
+          "legendFormat": "Update Solvable Orders",
+          "refId": "C"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rate(gp_v2_autopilot_auction_overhead_time{phase=\"db_cleanup\"}[1m])",
+          "legendFormat": "DB Cleanup",
+          "refId": "D"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rate(gp_v2_autopilot_auction_overhead_time{phase=\"serialize_request\"}[1m])",
+          "legendFormat": "Serialize Request",
+          "refId": "E"
         }
       ],
-      "title": "Submission Rate by Trader (Top N)",
+      "title": "Auction Overhead by Phase",
+      "description": "Time spent in each autopilot phase per second of wall-clock time (s/s). settlement_indexer and maintenance_total dominate. Spikes here reduce time available for solving.",
       "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
-      "id": 12,
-      "panels": [],
-      "title": "Distribution",
-      "type": "row"
     },
     {
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
-          "custom": { "hideFrom": { "legend": false, "tooltip": false, "viz": false } },
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 24 },
-      "id": 13,
-      "options": {
-        "displayLabels": ["name", "percent"],
-        "legend": {
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true,
-          "values": ["value"]
-        },
-        "pieType": "pie",
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
-        "tooltip": { "mode": "single", "sort": "none" }
-      },
-      "pluginVersion": "10.0.0",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "topk($top_n, cow_perf_trader_orders_submitted_total)",
-          "legendFormat": "Trader {{trader_index}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Order Distribution",
-      "type": "piechart"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
           "custom": {
-            "align": "auto",
-            "cellOptions": { "type": "auto" },
-            "inspect": false
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 80 }
-            ]
-          }
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "s"
         },
-        "overrides": [
-          {
-            "matcher": { "id": "byName", "options": "Trader" },
-            "properties": [{ "id": "custom.width", "value": 100 }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Submitted" },
-            "properties": [{ "id": "custom.width", "value": 100 }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Filled" },
-            "properties": [{ "id": "custom.width", "value": 100 }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Success %" },
-            "properties": [
-              { "id": "unit", "value": "percent" },
-              { "id": "custom.width", "value": 100 },
-              { "id": "thresholds", "value": {
-                "mode": "absolute",
-                "steps": [
-                  { "color": "red", "value": null },
-                  { "color": "yellow", "value": 50 },
-                  { "color": "green", "value": 90 }
-                ]
-              }},
-              { "id": "custom.cellOptions", "value": { "type": "color-background" } }
-            ]
-          }
-        ]
+        "overrides": []
       },
-      "gridPos": { "h": 8, "w": 16, "x": 8, "y": 24 },
-      "id": 14,
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 31 },
+      "id": 13,
       "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "fields": "",
-          "reducer": ["sum"],
-          "show": false
+        "legend": {
+          "calcs": ["mean", "max", "last"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
         },
-        "showHeader": true,
-        "sortBy": [{ "desc": true, "displayName": "Submitted" }]
+        "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "cow_perf_trader_orders_submitted_total",
-          "format": "table",
-          "instant": true,
-          "legendFormat": "__auto",
+          "expr": "histogram_quantile(0.5, rate(cow_perf_order_acceptance_latency_seconds_bucket[5m]))",
+          "legendFormat": "p50",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "cow_perf_trader_orders_filled_total",
-          "format": "table",
-          "instant": true,
-          "legendFormat": "__auto",
+          "expr": "histogram_quantile(0.95, rate(cow_perf_order_acceptance_latency_seconds_bucket[5m]))",
+          "legendFormat": "p95",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "cow_perf_trader_orders_filled_total / cow_perf_trader_orders_submitted_total * 100",
-          "format": "table",
-          "instant": true,
-          "legendFormat": "__auto",
+          "expr": "histogram_quantile(0.99, rate(cow_perf_order_acceptance_latency_seconds_bucket[5m]))",
+          "legendFormat": "p99",
           "refId": "C"
         }
       ],
-      "title": "Trader Success Rates",
-      "transformations": [
-        {
-          "id": "merge",
-          "options": {}
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": { "Time": true },
-            "indexByName": {},
-            "renameByName": {
-              "trader_index": "Trader",
-              "Value #A": "Submitted",
-              "Value #B": "Filled",
-              "Value #C": "Success %"
-            }
-          }
-        }
-      ],
-      "type": "table"
+      "title": "Order Acceptance Latency (proxy for wait before first auction)",
+      "description": "Time from order creation to orderbook acceptance (p50/p95/p99). Once accepted, an order enters the next auction update cycle (≤10s with 10s block time). This is the best available proxy for 'how long an order waits before a solver first sees it'. Only populated when cow-perf is running with --prometheus-port.",
+      "type": "timeseries"
     }
   ],
   "refresh": "5s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["cow-protocol", "performance-testing", "traders"],
+  "tags": ["cow-protocol", "performance-testing", "auction"],
   "templating": {
     "list": [
       {
@@ -675,38 +672,14 @@
         "skipUrlSync": false,
         "sort": 1,
         "type": "query"
-      },
-      {
-        "current": {
-          "selected": false,
-          "text": "10",
-          "value": "10"
-        },
-        "hide": 0,
-        "includeAll": false,
-        "label": "Top N",
-        "multi": false,
-        "name": "top_n",
-        "options": [
-          { "selected": false, "text": "5", "value": "5" },
-          { "selected": true, "text": "10", "value": "10" },
-          { "selected": false, "text": "20", "value": "20" },
-          { "selected": false, "text": "50", "value": "50" }
-        ],
-        "query": "5,10,20,50",
-        "skipUrlSync": false,
-        "type": "custom"
       }
     ]
   },
-  "time": {
-    "from": "now-15m",
-    "to": "now"
-  },
+  "time": { "from": "now-15m", "to": "now" },
   "timepicker": {},
   "timezone": "",
-  "title": "CoW Performance Testing - Trader Activity",
-  "uid": "cow-perf-traders",
+  "title": "CoW Performance Testing - Auction Activity",
+  "uid": "cow-perf-auction",
   "version": 1,
   "weekStart": ""
 }

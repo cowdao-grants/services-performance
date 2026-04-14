@@ -501,6 +501,39 @@ store.register_eviction_callback("order", on_order_evicted)
 
 ---
 
+## Autopilot Auction Metrics (from CoW Protocol services)
+
+These metrics are exported by the `autopilot` service (scraped at `autopilot:9589/metrics`) and used by the **Auction Activity** Grafana dashboard. They are always available while the Docker stack is running — no cow-perf test needs to be active.
+
+| Metric | Type | Description | Example Query |
+|--------|------|-------------|---------------|
+| `gp_v2_autopilot_auction_creations` | counter | Total auctions initiated since startup | `rate(gp_v2_autopilot_auction_creations[5m]) * 60` → auctions/min |
+| `gp_v2_autopilot_runloop_auction` | gauge | Last executed auction ID; stalls indicate a stuck run loop | direct read |
+| `gp_v2_autopilot_auction_candidate_orders{class}` | gauge | Orders entering the current auction by class (Limit/Market/Liquidity) | `sum(gp_v2_autopilot_auction_candidate_orders)` |
+| `gp_v2_autopilot_auction_solvable_orders{class}` | gauge | Subset of candidate orders that passed all filters | compare vs candidate for filter rate |
+| `gp_v2_autopilot_auction_filtered_orders{reason}` | gauge | Orders excluded from the auction by reason (insufficient_balance, out_of_market, missing_price, dust_order, other) | `gp_v2_autopilot_auction_filtered_orders{reason="out_of_market"}` |
+| `gp_v2_autopilot_runloop_auction_winners` | histogram | Number of winning solver solutions per auction (normally 1) | `_sum / _count` → avg winners/auction |
+| `gp_v2_autopilot_runloop_matched_unsettled` | counter | Orders included in a losing solver solution — missed settlement opportunities | `increase(gp_v2_autopilot_runloop_matched_unsettled[5m])` |
+| `gp_v2_autopilot_auction_overhead_time{phase}` | counter | Cumulative seconds spent per autopilot phase (settlement_indexer, maintenance_total, update_solvabe_orders, db_cleanup, serialize_request) | `rate(gp_v2_autopilot_auction_overhead_time[1m])` |
+| `gp_v2_autopilot_auction_update_stage_time{stage}` | histogram | Per-stage time for the solvable orders cache update (balance_filtering, banned_user_filtering, etc.) | `histogram_quantile(0.95, rate(gp_v2_autopilot_auction_update_stage_time_bucket[5m]))` |
+| `gp_v2_autopilot_table_rows{table}` | gauge | Row counts for key DB tables (settlements, orders, auctions, competition_auctions) | `gp_v2_autopilot_table_rows{table="settlements"}` |
+
+### Auction Timing and Order Wait Time
+
+All accepted orders enter the next auction update cycle (≤ one block period, currently 10s). The best available proxy for "how long an order waits before a solver first sees it" is:
+
+```
+wait_time ≈ cow_perf_order_acceptance_latency_seconds + (0 to 10s block wait)
+```
+
+`cow_perf_order_acceptance_latency_seconds` (a cow-perf histogram) measures creation → orderbook acceptance. The Auction Activity dashboard plots p50/p95/p99 of this metric.
+
+### TVL per Auction
+
+TVL (total value settled per auction in USD) is **not available** from existing metrics. The autopilot, driver, and orderbook services do not expose token amounts or USD values per auction. Tracking this would require new instrumentation on the autopilot side to emit per-auction sell/buy token amounts.
+
+---
+
 ## See Also
 
 - [Benchmarking Guide](benchmarking.md)
