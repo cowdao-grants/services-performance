@@ -26,10 +26,6 @@ class NetworkConfig(BaseSettings):
         default="0x9008D19f58AAbD9eD0D60971565AA8510560ab41",
         description="CoW Protocol settlement contract address",
     )
-    composable_cow_contract: str = Field(
-        default="0xfdaFc9d1902f4e0b84f65F49f244b32b31013b74",
-        description="ComposableCow contract address for conditional orders",
-    )
     vault_relayer: str = Field(
         default="0xC92E8bdf79f0507f65a392b0ab4667716BFE0110",
         description="VaultRelayer contract address for token approvals",
@@ -130,6 +126,43 @@ class OutputConfig(BaseSettings):
         return v
 
 
+class ScalingConfig(BaseSettings):
+    """Configuration for a scaling / complexity experiment.
+
+    When enabled, `cow-perf run` runs a doubling-sequence of steps instead of
+    a single fixed-load test and classifies algorithmic complexity from the
+    results.
+    """
+
+    model_config = SettingsConfigDict(env_prefix="COW_SCALING_")
+
+    enabled: bool = Field(
+        default=False,
+        description="Run a scaling experiment instead of a single fixed-load test",
+    )
+    order_counts: list[int] = Field(
+        default_factory=lambda: [50, 100, 200, 400, 800, 1600, 3200, 6400, 12800],
+        description="Ordered list of target order counts for each step",
+    )
+    duration_per_step: int = Field(
+        default=120,
+        ge=1,
+        description="Duration in seconds for each scaling step",
+    )
+    monitor_containers: list[str] = Field(
+        default_factory=lambda: ["autopilot", "driver", "orderbook"],
+        description="Docker container names to sample for RSS memory",
+    )
+    skip_memory: bool = Field(
+        default=False,
+        description="Skip Docker memory sampling (useful when Docker SDK is unavailable)",
+    )
+    output_file: str | None = Field(
+        default=None,
+        description="Path to write the JSON scaling report (optional)",
+    )
+
+
 class OrderCleanupConfig(BaseSettings):
     """Configuration for order cleanup behavior."""
 
@@ -184,6 +217,7 @@ class PerformanceTestConfig(BaseSettings):
     output: OutputConfig = Field(default_factory=OutputConfig)
     wallet: WalletConfig = Field(default_factory=WalletConfig)
     order_cleanup: OrderCleanupConfig = Field(default_factory=OrderCleanupConfig)
+    scaling: ScalingConfig = Field(default_factory=ScalingConfig)
 
     # Scenario metadata (optional, for scenario files)
     name: str | None = Field(default=None, description="Scenario name")
@@ -363,11 +397,8 @@ class PerformanceTestConfig(BaseSettings):
     )
 
     # Order type ratios (defaults that sum to 1.0)
-    market_order_ratio: float = Field(default=0.4, ge=0.0, le=1.0)
-    limit_order_ratio: float = Field(default=0.4, ge=0.0, le=1.0)
-    twap_order_ratio: float = Field(default=0.1, ge=0.0, le=1.0)
-    stop_loss_order_ratio: float = Field(default=0.05, ge=0.0, le=1.0)
-    good_after_time_order_ratio: float = Field(default=0.05, ge=0.0, le=1.0)
+    market_order_ratio: float = Field(default=0.5, ge=0.0, le=1.0)
+    limit_order_ratio: float = Field(default=0.5, ge=0.0, le=1.0)
 
     # Order amount configuration (in token units)
     min_order_amount: float = Field(
@@ -411,9 +442,6 @@ class PerformanceTestConfig(BaseSettings):
     @field_validator(
         "market_order_ratio",
         "limit_order_ratio",
-        "twap_order_ratio",
-        "stop_loss_order_ratio",
-        "good_after_time_order_ratio",
     )
     @classmethod
     def validate_ratio(cls, v: float) -> float:
@@ -424,13 +452,7 @@ class PerformanceTestConfig(BaseSettings):
 
     def validate_ratio_sum(self) -> None:
         """Validate that all order type ratios sum to 1.0."""
-        total = (
-            self.market_order_ratio
-            + self.limit_order_ratio
-            + self.twap_order_ratio
-            + self.stop_loss_order_ratio
-            + self.good_after_time_order_ratio
-        )
+        total = self.market_order_ratio + self.limit_order_ratio
         if abs(total - 1.0) > 0.001:  # Allow for floating point precision
             raise ValueError(
                 f"Order type ratios must sum to 1.0, got {total}. "
@@ -553,7 +575,6 @@ network:
   chain_id: 1  # 1=Mainnet, 100=Gnosis Chain
   rpc_url: "https://eth.llamarpc.com"
   settlement_contract: "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"
-  composable_cow_contract: "0xfdaFc9d1902f4e0b84f65F49f244b32b31013b74"
   vault_relayer: "0xC92E8bdf79f0507f65a392b0ab4667716BFE0110"
 
 # API settings
@@ -645,11 +666,8 @@ enable_per_trader_rate_limit: false
 rate_limit_burst_allowance: 1.5  # Allow bursts up to 1.5x sustained rate
 
 # Order type ratios (must sum to 1.0)
-market_order_ratio: 0.4
-limit_order_ratio: 0.4
-twap_order_ratio: 0.1
-stop_loss_order_ratio: 0.05
-good_after_time_order_ratio: 0.05
+market_order_ratio: 0.5
+limit_order_ratio: 0.5
 
 # Order cleanup configuration
 order_cleanup:

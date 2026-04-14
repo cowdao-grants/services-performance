@@ -272,9 +272,6 @@ tags:
 # Custom order distribution (must sum to 1.0)
 market_order_ratio: 0.6
 limit_order_ratio: 0.4
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 """
         with open(scenario_path, "w") as f:
             f.write(scenario_content)

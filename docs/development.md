@@ -26,8 +26,13 @@ Choose **one** of the following methods:
 
 2. **Install Poetry** (if not installed):
    ```bash
-   curl -sSL https://install.python-poetry.org | python3 -
+   # Recommended — no remote execution
+   pipx install poetry
    ```
+   If `pipx` is not available, install it first (`pip install --user pipx`) or
+   use `pip install --user poetry` as a fallback.
+   Avoid `curl | python3` patterns — they execute untrusted remote code and
+   are a supply-chain attack vector.
 
 3. **Install dependencies:**
    ```bash

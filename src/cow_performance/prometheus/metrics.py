@@ -41,6 +41,7 @@ class MetricsRegistry:
         self._init_resource_metrics()
         self._init_trader_metrics()
         self._init_comparison_metrics()
+        self._init_scaling_metrics()
 
     def _init_order_metrics(self) -> None:
         """Initialize order-related counters and gauges."""
@@ -269,6 +270,34 @@ class MetricsRegistry:
         self.traders_active = Gauge(
             "cow_perf_traders_active",
             "Count of currently active traders",
+            registry=self.registry,
+        )
+
+    def _init_scaling_metrics(self) -> None:
+        """Initialize metrics for scaling / complexity experiments."""
+        self.scaling_phase_order_count = Gauge(
+            "cow_perf_scaling_phase_order_count_target",
+            "Target order count for the current scaling experiment phase",
+            ["scenario"],
+            registry=self.registry,
+        )
+        self.scaling_complexity_slope = Gauge(
+            "cow_perf_scaling_complexity_slope",
+            "Power-law slope k from log-log regression (y ~ x^k) for a given metric",
+            ["scenario", "metric"],
+            registry=self.registry,
+        )
+        self.order_acceptance_latency = Histogram(
+            "cow_perf_order_acceptance_latency_seconds",
+            "Total time from order creation to orderbook acceptance (creation→acceptance)",
+            ["scenario"],
+            buckets=[1, 5, 10, 30, 60, 120, 300, 600],
+            registry=self.registry,
+        )
+        self.container_rss_snapshot_bytes = Gauge(
+            "cow_perf_container_rss_snapshot_bytes",
+            "Container RSS memory at a scaling phase snapshot (before/after each step)",
+            ["scenario", "container", "snapshot"],
             registry=self.registry,
         )
 

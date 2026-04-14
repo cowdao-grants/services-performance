@@ -16,6 +16,7 @@ from .commands.baselines import (
 )
 from .commands.report import app as report_app
 from .commands.run import run_command
+from .commands.scale import scale_command
 from .commands.scenarios import (
     create_scenario_template,
     list_scenarios_command,
@@ -141,7 +142,23 @@ def run(
         if baseline_tags:
             parsed_tags = [tag.strip() for tag in baseline_tags.split(",") if tag.strip()]
 
-        # Run the test
+        # Scaling experiment: run a doubling sequence instead of a single test
+        if cfg.scaling.enabled:
+            sc = cfg.scaling
+            output_path = Path(sc.output_file) if sc.output_file else None
+            scale_command(
+                config=cfg,
+                order_counts=sorted(set(sc.order_counts)),
+                duration_per_step=sc.duration_per_step,
+                monitor_containers=sc.monitor_containers,
+                output_file=output_path,
+                skip_memory=sc.skip_memory,
+                verbose=verbose,
+                prometheus_port=effective_prometheus_port,
+            )
+            return
+
+        # Single fixed-load test
         run_command(
             config=cfg,
             traders=traders,
@@ -365,7 +382,6 @@ def config(
         table.add_row("Chain ID", str(cfg.network.chain_id))
         table.add_row("RPC URL", cfg.network.rpc_url)
         table.add_row("Settlement Contract", cfg.network.settlement_contract)
-        table.add_row("ComposableCow Contract", cfg.network.composable_cow_contract)
         console.print(table)
         console.print()
 
@@ -406,9 +422,6 @@ def config(
         table.add_column("Ratio", style="green")
         table.add_row("Market Orders", f"{cfg.market_order_ratio:.2%}")
         table.add_row("Limit Orders", f"{cfg.limit_order_ratio:.2%}")
-        table.add_row("TWAP Orders", f"{cfg.twap_order_ratio:.2%}")
-        table.add_row("Stop-Loss Orders", f"{cfg.stop_loss_order_ratio:.2%}")
-        table.add_row("Good-After-Time Orders", f"{cfg.good_after_time_order_ratio:.2%}")
         console.print(table)
 
     except FileNotFoundError as e:

@@ -36,11 +36,8 @@ startup_interval: 0.5
 trading_pattern: "constant_rate"
 base_rate: 60.0
 
-market_order_ratio: 0.4
-limit_order_ratio: 0.4
-twap_order_ratio: 0.1
-stop_loss_order_ratio: 0.05
-good_after_time_order_ratio: 0.05
+market_order_ratio: 0.5
+limit_order_ratio: 0.5
 
 success_criteria:
   min_success_rate: 0.80

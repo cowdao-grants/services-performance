@@ -61,9 +61,6 @@ startup_interval: 0.1
 # Order type distribution (favor market orders for maximum load)
 market_order_ratio: 0.7
 limit_order_ratio: 0.3
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 
 # Trading pattern - burst to simulate spikes
 trading_pattern: "burst"

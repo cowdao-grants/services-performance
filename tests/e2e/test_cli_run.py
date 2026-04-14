@@ -87,7 +87,6 @@ network:
   chain_id: 1
   rpc_url: "http://localhost:8545"
   settlement_contract: "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"
-  composable_cow_contract: "0xfdaFc9d1902f4e0b84f65F49f244b32b31013b74"
 
 api:
   base_url: "{ORDERBOOK_API_URL}"
@@ -104,9 +103,6 @@ default_duration: 3
 
 market_order_ratio: 1.0
 limit_order_ratio: 0.0
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 """
             config_file.write(config_content)
             config_path = config_file.name
@@ -237,9 +233,6 @@ default_duration: 5
 
 market_order_ratio: 1.0
 limit_order_ratio: 0.0
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 """
             config_file.write(config_content)
             config_path = config_file.name

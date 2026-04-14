@@ -23,8 +23,8 @@ wallet:
   token_balances:
     WETH: 1000.0    # Increased to support 100-500 WETH orders
     DAI: 10000.0
-    USDC: 10000.0
-    USDT: 10000.0
+    # USDC excluded: 6-decimal fee can exceed sell amounts at any gas price
+    # USDT excluded: non-standard approve() reverts on second settlement batch
 
 # Trading pattern: Constant rate (simple and predictable)
 trading_pattern: "constant_rate"
@@ -33,9 +33,6 @@ base_rate: 20.0  # 20 orders per minute (~0.33 orders/sec per trader)
 # Order type distribution (market only for quick test)
 market_order_ratio: 1.0
 limit_order_ratio: 0.0
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 
 # Order amount configuration (optimized for fork mode liquidity)
 # Using smaller amounts to match typical CoW Protocol production orders

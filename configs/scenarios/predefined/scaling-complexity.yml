@@ -1,0 +1,66 @@
+# CoW Performance Testing Suite — Scaling / Complexity Scenario
+#
+# Use with:  cow-perf run --config configs/scenarios/predefined/scaling-complexity.yml
+#
+# Runs a doubling sequence (50 → 12 800 orders) and classifies backend
+# algorithmic complexity for latency and memory metrics.
+
+name: "Scaling Complexity Analysis"
+description: >
+  Doubling-sequence experiment that runs order loads at
+  50, 100, 200, 400, 800, 1600, 3200, 6400, and 12800 targets per step.
+  Produces a complexity classification (linear / log-linear / quadratic)
+  for p99 submission latency, p99 lifecycle latency, and heap growth.
+tags: ["scaling", "complexity", "profiling", "whitebox"]
+
+# ----- Scaling experiment ----------------------------------------------------
+scaling:
+  enabled: true
+  order_counts: [50, 100, 200, 400, 800, 1600, 3200, 6400, 12800]
+  duration_per_step: 120        # seconds per step
+  monitor_containers: [autopilot, driver, orderbook]
+  skip_memory: true
+  # output_file: ".cow-perf/results/scaling-report.json"
+
+# ----- Base test config (shared across all steps) ----------------------------
+
+num_traders: 20          # 20 traders provides good parallelism for high rates
+trading_pattern: "constant_rate"
+base_rate: 60.0          # overridden per-step by the scaling logic
+
+# Order type distribution — keep simple for scaling analysis
+market_order_ratio: 0.5
+limit_order_ratio: 0.5
+
+# Order amounts in native token units (e.g. 5 WETH, 5 DAI).
+# USDC is excluded from this scenario — its 6-decimal fee (~5.2 USDC at fork gas price)
+# would exceed small sell amounts. WETH↔DAI pairs are sufficient for scaling analysis.
+min_order_amount: 5.0
+max_order_amount: 10.0
+
+# No rate limiting — we want to stress the backend
+enable_global_rate_limit: false
+enable_per_trader_rate_limit: false
+
+# ----- Network / API ---------------------------------------------------------
+network:
+  chain_id: 1
+  rpc_url: "http://localhost:8545"
+
+# ----- Wallet funding --------------------------------------------------------
+wallet:
+  funding_enabled: true
+  eth_balance: 100.0
+  token_balances:
+    WETH: 10000.0   # 10K per trader; all 9 steps combined need ~4300 WETH per trader
+    DAI: 10000.0    # 10K per trader via mint (unlimited); no whale balance needed
+    # USDC excluded: fee oracle quotes ~5.2 USDC fee > min sell amount at mainnet fork gas price
+
+# ----- Expected outcomes -----------------------------------------------------
+# For a healthy solver the p99 lifecycle latency should grow roughly
+# linearly (O(n)) with order count.  Super-linear growth (O(n²) or worse)
+# indicates an algorithmic bottleneck in the solver or autopilot.
+#
+# Typical targets per step (baseline solver, fork mode):
+#   50   orders → ~500 ms p99 lifecycle
+#   12800 orders → solver may not keep up (saturation expected above ~1600)

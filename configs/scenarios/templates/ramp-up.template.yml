@@ -56,9 +56,6 @@ startup_interval: 0.1
 # Order type distribution (favor market orders for realistic load testing)
 market_order_ratio: 0.6
 limit_order_ratio: 0.4
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 
 # Trading pattern - constant rate at target load
 trading_pattern: "constant_rate"

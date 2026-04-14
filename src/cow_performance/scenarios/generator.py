@@ -149,9 +149,6 @@ class ConfigGenerator:
             "base_rate": orders_per_minute,
             "market_order_ratio": 0.6,
             "limit_order_ratio": 0.4,
-            "twap_order_ratio": 0.0,
-            "stop_loss_order_ratio": 0.0,
-            "good_after_time_order_ratio": 0.0,
         }
 
         return config

@@ -376,12 +376,6 @@ class OrderTracker:
                 metrics.market_orders += 1
             elif order_type == "limit":
                 metrics.limit_orders += 1
-            elif order_type == "twap":
-                metrics.twap_orders += 1
-            elif order_type == "stop_loss":
-                metrics.stop_loss_orders += 1
-            elif order_type == "good_after_time":
-                metrics.good_after_time_orders += 1
 
         # Calculate average times
         times_to_submit = [t for order in orders if (t := order.get_time_to_submit()) is not None]

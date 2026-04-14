@@ -22,8 +22,8 @@ wallet:
   token_balances:
     WETH: 10.0
     DAI: 10000.0
-    USDC: 10000.0
-    USDT: 10000.0
+    # USDC excluded: 6-decimal fee can exceed small sell amounts at any gas price
+    # USDT excluded: non-standard approve() reverts on second settlement batch
 
 # Trading pattern: Constant rate (simple and predictable)
 trading_pattern: "constant_rate"
@@ -32,15 +32,12 @@ base_rate: 30.0  # 30 orders per minute (0.5 orders/sec)
 # Order type distribution (balanced)
 market_order_ratio: 0.5
 limit_order_ratio: 0.5
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 
-# Order amount configuration (optimized for baseline solver)
-# Smaller amounts have better chance of being filled by AMM pools
-# Focus on 0.1-2.0 ETH/token range for reliable execution
-min_order_amount: 0.1
-max_order_amount: 2.0
+# Order amount configuration
+# 1.0–5.0 tokens ensures the sell amount always exceeds any fee
+# at near-zero gas prices (post --block-base-fee-per-gas 0 chain config)
+min_order_amount: 1.0
+max_order_amount: 5.0
 
 # No rate limiting needed for light load
 enable_global_rate_limit: false

@@ -39,9 +39,6 @@ quiet_period: 10.0
 # Override market order ratio to test more market orders
 market_order_ratio: 0.8
 limit_order_ratio: 0.2
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 
 # Inherited from base-scenario.yml (not changed):
 # - duration: 300

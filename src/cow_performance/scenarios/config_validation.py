@@ -305,13 +305,7 @@ class ConfigValidator:
             config: ScenarioConfig instance
         """
         # Check if all ratios are zero (edge case)
-        total = (
-            config.market_order_ratio
-            + config.limit_order_ratio
-            + config.twap_order_ratio
-            + config.stop_loss_order_ratio
-            + config.good_after_time_order_ratio
-        )
+        total = config.market_order_ratio + config.limit_order_ratio
 
         if total == 0:
             self.errors.append(
@@ -331,9 +325,6 @@ class ConfigValidator:
             for ratio in [
                 config.market_order_ratio,
                 config.limit_order_ratio,
-                config.twap_order_ratio,
-                config.stop_loss_order_ratio,
-                config.good_after_time_order_ratio,
             ]
             if ratio > 0
         )

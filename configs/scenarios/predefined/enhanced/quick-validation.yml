@@ -33,9 +33,6 @@ startup_interval: 0.1
 # Order type distribution - simple mix
 market_order_ratio: 0.7
 limit_order_ratio: 0.3
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 
 # Trading pattern - constant rate
 trading_pattern: constant_rate

@@ -10,9 +10,8 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
-from .conditional_order_factory import ConditionalOrderFactory
 from .order_factory import OrderFactory
-from .order_signer import ConditionalOrderSigner, OrderSigner
+from .order_signer import OrderSigner
 from .order_tracker import OrderTracker
 from .trader_account import TraderPool
 from .trader_simulator import TraderBehaviorConfig, TraderSimulator
@@ -149,9 +148,7 @@ class TraderOrchestrator:
         self,
         trader_pool: TraderPool,
         order_factory: OrderFactory,
-        conditional_order_factory: ConditionalOrderFactory,
         order_signer: OrderSigner,
-        conditional_order_signer: ConditionalOrderSigner,
         order_tracker: OrderTracker,
         default_behavior_config: TraderBehaviorConfig,
         orchestration_config: OrchestrationConfig,
@@ -165,9 +162,7 @@ class TraderOrchestrator:
         Args:
             trader_pool: Pool of trader accounts
             order_factory: Factory for standard orders
-            conditional_order_factory: Factory for conditional orders
             order_signer: Signer for standard orders
-            conditional_order_signer: Signer for conditional orders
             order_tracker: Shared order tracker for all traders
             default_behavior_config: Default behavior configuration for traders
             orchestration_config: Configuration for orchestration
@@ -177,9 +172,7 @@ class TraderOrchestrator:
         """
         self.trader_pool = trader_pool
         self.order_factory = order_factory
-        self.conditional_order_factory = conditional_order_factory
         self.order_signer = order_signer
-        self.conditional_order_signer = conditional_order_signer
         self.order_tracker = order_tracker
         self.default_behavior_config = default_behavior_config
         self.orchestration_config = orchestration_config
@@ -286,9 +279,7 @@ class TraderOrchestrator:
         return TraderSimulator(
             trader=trader,
             order_factory=self.order_factory,
-            conditional_order_factory=self.conditional_order_factory,
             order_signer=self.order_signer,
-            conditional_order_signer=self.conditional_order_signer,
             order_tracker=self.order_tracker,
             behavior_config=behavior_config,
             api_client=self.api_client,
@@ -353,33 +344,6 @@ class TraderOrchestrator:
                 # Small delay before restart
                 await asyncio.sleep(1.0)
 
-    async def _upload_app_data(self) -> None:
-        """Upload appData documents for market and limit order classification."""
-        if self.api_client is None:
-            # Skip upload in dry-run mode
-            return
-
-        try:
-            print("Uploading appData documents for order classification...")
-
-            # Upload market order appData
-            await self.api_client.upload_app_data_with_retry(
-                app_data_hash=self.order_factory.market_app_data_hash,
-                app_data_doc=self.order_factory.market_app_data_doc,
-            )
-
-            # Upload limit order appData
-            await self.api_client.upload_app_data_with_retry(
-                app_data_hash=self.order_factory.limit_app_data_hash,
-                app_data_doc=self.order_factory.limit_app_data_doc,
-            )
-
-            print("AppData documents uploaded successfully")
-
-        except Exception as e:
-            print(f"Warning: Failed to upload appData documents: {e}")
-            print("Continuing with simulation - orders may not be classified correctly")
-
     async def _wait_for_settlements(self, wait_time: float) -> None:
         """
         Wait for pending orders to settle after test completes.
@@ -413,7 +377,6 @@ class TraderOrchestrator:
         # Monitor orders with polling
         start_time = time.time()
         poll_interval = 10.0  # Poll every 10 seconds during settlement
-        last_filled_count = 0
 
         while time.time() - start_time < wait_time:
             # Poll all pending orders
@@ -440,25 +403,25 @@ class TraderOrchestrator:
             failed_orders = [o for o in all_orders if o.current_status.value == "failed"]
 
             filled_count = len(filled_orders)
-            if filled_count > last_filled_count:
-                # Build status breakdown for pending orders
-                loop_status_counts: dict[str, int] = {}
-                for o in pending_orders:
-                    status = o.current_status.value
-                    loop_status_counts[status] = loop_status_counts.get(status, 0) + 1
+            elapsed_s = int(time.time() - start_time)
+            remaining_s = max(0, int(wait_time) - elapsed_s)
 
-                status_str = ", ".join(f"{v} {k}" for k, v in sorted(loop_status_counts.items()))
-                terminal_str = ""
-                if expired_orders or failed_orders:
-                    terminal_str = f" | {len(expired_orders)} expired, {len(failed_orders)} failed"
+            # Build status breakdown for pending orders
+            loop_status_counts: dict[str, int] = {}
+            for o in pending_orders:
+                status = o.current_status.value
+                loop_status_counts[status] = loop_status_counts.get(status, 0) + 1
+            status_str = ", ".join(f"{v} {k}" for k, v in sorted(loop_status_counts.items()))
+            terminal_str = ""
+            if expired_orders or failed_orders:
+                terminal_str = f" | {len(expired_orders)} expired, {len(failed_orders)} failed"
 
-                print(
-                    f"  Progress: {filled_count} filled, "
-                    f"{len(pending_orders)} pending [{status_str}]{terminal_str} "
-                    f"({int(time.time() - start_time)}s elapsed)"
-                )
-                last_filled_count = filled_count
-
+            print(
+                f"  Settlement [{elapsed_s}s/{int(wait_time)}s, {remaining_s}s left]: "
+                f"{filled_count} filled, {len(pending_orders)} pending"
+                f"{(' [' + status_str + ']') if status_str else ''}"
+                f"{terminal_str}"
+            )
             # If all orders are settled, we can exit early
             if not pending_orders:
                 print("All orders settled!")
@@ -500,9 +463,6 @@ class TraderOrchestrator:
 
         config = self.orchestration_config
         num_traders = min(config.num_traders, self.trader_pool.get_pool_size())
-
-        # Upload appData documents before starting traders
-        await self._upload_app_data()
 
         print(f"Starting {num_traders} traders...")
 
@@ -628,9 +588,6 @@ class TraderOrchestrator:
                 # Order types
                 "market_orders": order_metrics.market_orders,
                 "limit_orders": order_metrics.limit_orders,
-                "twap_orders": order_metrics.twap_orders,
-                "stop_loss_orders": order_metrics.stop_loss_orders,
-                "good_after_time_orders": order_metrics.good_after_time_orders,
             },
             "performance": {
                 "orders_per_second": (
@@ -658,9 +615,7 @@ async def run_load_test(
     duration: float = 60.0,
     trader_pool: TraderPool | None = None,
     order_factory: OrderFactory | None = None,
-    conditional_order_factory: ConditionalOrderFactory | None = None,
     order_signer: OrderSigner | None = None,
-    conditional_order_signer: ConditionalOrderSigner | None = None,
     order_tracker: OrderTracker | None = None,
     behavior_config: TraderBehaviorConfig | None = None,
     orchestration_config: OrchestrationConfig | None = None,
@@ -677,9 +632,7 @@ async def run_load_test(
         duration: Test duration in seconds
         trader_pool: Optional trader pool (creates default if None)
         order_factory: Optional order factory (creates default if None)
-        conditional_order_factory: Optional conditional order factory (creates default if None)
         order_signer: Optional order signer (creates default if None)
-        conditional_order_signer: Optional conditional order signer (creates default if None)
         order_tracker: Optional order tracker (creates default if None)
         behavior_config: Optional behavior config (uses default if None)
         orchestration_config: Optional orchestration config (uses default if None)
@@ -704,24 +657,18 @@ async def run_load_test(
             duration=duration,
         )
 
-    # Note: order_factory, conditional_order_factory, order_signer, and
-    # conditional_order_signer would need to be created with proper
+    # Note: order_factory and order_signer would need to be created with proper
     # configuration (chain_id, contract addresses, etc.)
     # For now, we require them to be passed in or this function will fail
 
     if order_factory is None or order_signer is None:
         raise ValueError("order_factory and order_signer must be provided")
 
-    if conditional_order_factory is None or conditional_order_signer is None:
-        raise ValueError("conditional_order_factory and conditional_order_signer must be provided")
-
     # Create orchestrator
     orchestrator = TraderOrchestrator(
         trader_pool=trader_pool,
         order_factory=order_factory,
-        conditional_order_factory=conditional_order_factory,
         order_signer=order_signer,
-        conditional_order_signer=conditional_order_signer,
         order_tracker=order_tracker,
         default_behavior_config=behavior_config,
         orchestration_config=orchestration_config,

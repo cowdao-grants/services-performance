@@ -33,11 +33,8 @@ poisson_lambda: 30.0  # Average 30 orders per minute
                       # More realistic than uniform random intervals
 
 # Order type distribution (realistic mix)
-market_order_ratio: 0.4
-limit_order_ratio: 0.4
-twap_order_ratio: 0.1
-stop_loss_order_ratio: 0.05
-good_after_time_order_ratio: 0.05
+market_order_ratio: 0.5
+limit_order_ratio: 0.5
 
 # No rate limiting for this realistic scenario
 enable_global_rate_limit: false

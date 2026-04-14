@@ -33,9 +33,6 @@ def sample_scenarios(scenarios_dir):
         base_rate=300.0,
         market_order_ratio=0.5,
         limit_order_ratio=0.5,
-        twap_order_ratio=0.0,
-        stop_loss_order_ratio=0.0,
-        good_after_time_order_ratio=0.0,
     )
     save_scenario_to_yaml(regression, scenarios_dir / "regression-test.yml")
 
@@ -51,9 +48,6 @@ def sample_scenarios(scenarios_dir):
         base_rate=6000.0,
         market_order_ratio=0.5,
         limit_order_ratio=0.5,
-        twap_order_ratio=0.0,
-        stop_loss_order_ratio=0.0,
-        good_after_time_order_ratio=0.0,
     )
     save_scenario_to_yaml(stress, scenarios_dir / "stress-test.yml")
 
@@ -69,9 +63,6 @@ def sample_scenarios(scenarios_dir):
         base_rate=600.0,
         market_order_ratio=0.5,
         limit_order_ratio=0.5,
-        twap_order_ratio=0.0,
-        stop_loss_order_ratio=0.0,
-        good_after_time_order_ratio=0.0,
     )
     save_scenario_to_yaml(sustained, scenarios_dir / "sustained-load.yml")
 
@@ -87,9 +78,6 @@ def sample_scenarios(scenarios_dir):
         base_rate=300.0,
         market_order_ratio=0.5,
         limit_order_ratio=0.5,
-        twap_order_ratio=0.0,
-        stop_loss_order_ratio=0.0,
-        good_after_time_order_ratio=0.0,
     )
     save_scenario_to_yaml(baseline, scenarios_dir / "baseline.yml")
 
@@ -223,9 +211,6 @@ class TestScenarioListing:
             base_rate=300.0,
             market_order_ratio=1.0,
             limit_order_ratio=0.0,
-            twap_order_ratio=0.0,
-            stop_loss_order_ratio=0.0,
-            good_after_time_order_ratio=0.0,
         )
         save_scenario_to_yaml(scenario, enhanced_dir / "nested.yml")
 
@@ -307,9 +292,6 @@ class TestTagFiltering:
             base_rate=300.0,
             market_order_ratio=1.0,
             limit_order_ratio=0.0,
-            twap_order_ratio=0.0,
-            stop_loss_order_ratio=0.0,
-            good_after_time_order_ratio=0.0,
         )
         save_scenario_to_yaml(many_tags, scenarios_dir / "many-tags.yml")
 

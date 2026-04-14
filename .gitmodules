@@ -4,6 +4,3 @@
 [submodule "modules/hooks-trampoline"]
 	path = modules/hooks-trampoline
 	url = https://github.com/cowprotocol/hooks-trampoline.git
-[submodule "modules/watch-tower"]
-	path = modules/watch-tower
-	url = https://github.com/cowprotocol/watch-tower.git

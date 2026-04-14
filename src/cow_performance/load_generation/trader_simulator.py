@@ -2,7 +2,7 @@
 Trader simulation for realistic user behavior patterns.
 
 This module provides trader simulation with configurable behavior patterns,
-supporting all order types (market, limit, TWAP, stop-loss, good-after-time).
+supporting market and limit orders.
 """
 
 import asyncio
@@ -12,9 +12,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
-from .conditional_order_factory import ConditionalOrderFactory
 from .order_factory import OrderFactory
-from .order_signer import ConditionalOrderSigner, OrderSigner
+from .order_signer import OrderSigner
 from .order_tracker import OrderStatus, OrderTracker
 from .trader_account import TraderAccount
 
@@ -46,11 +45,8 @@ class TraderBehaviorConfig:
     base_rate: float = 6.0
 
     # Order type distribution (sum should be 1.0)
-    market_order_ratio: float = 0.4
-    limit_order_ratio: float = 0.4
-    twap_order_ratio: float = 0.1
-    stop_loss_order_ratio: float = 0.05
-    good_after_time_order_ratio: float = 0.05
+    market_order_ratio: float = 0.5
+    limit_order_ratio: float = 0.5
 
     # Random interval pattern parameters (seconds)
     min_interval: float = 5.0
@@ -90,13 +86,7 @@ class TraderBehaviorConfig:
 
     def __post_init__(self) -> None:
         """Validate configuration parameters."""
-        total_ratio = (
-            self.market_order_ratio
-            + self.limit_order_ratio
-            + self.twap_order_ratio
-            + self.stop_loss_order_ratio
-            + self.good_after_time_order_ratio
-        )
+        total_ratio = self.market_order_ratio + self.limit_order_ratio
         if not 0.99 <= total_ratio <= 1.01:  # Allow small floating point errors
             raise ValueError(f"Order type ratios must sum to 1.0, got {total_ratio}")
 
@@ -139,17 +129,15 @@ class TraderSimulator:
     """
     Simulates individual trader behavior with configurable patterns.
 
-    Generates and submits orders of all types (market, limit, TWAP, stop-loss,
-    good-after-time) according to configured behavior patterns.
+    Generates and submits market and limit orders according to configured
+    behavior patterns.
     """
 
     def __init__(
         self,
         trader: TraderAccount,
         order_factory: OrderFactory,
-        conditional_order_factory: ConditionalOrderFactory,
         order_signer: OrderSigner,
-        conditional_order_signer: ConditionalOrderSigner,
         order_tracker: OrderTracker,
         behavior_config: TraderBehaviorConfig,
         api_client: Any | None = None,
@@ -162,9 +150,7 @@ class TraderSimulator:
         Args:
             trader: The trader account to simulate
             order_factory: Factory for generating standard orders
-            conditional_order_factory: Factory for generating conditional orders
             order_signer: Signer for standard orders
-            conditional_order_signer: Signer for conditional orders
             order_tracker: Tracker for monitoring order lifecycle
             behavior_config: Configuration for trading behavior
             api_client: Optional API client for order submission
@@ -173,9 +159,7 @@ class TraderSimulator:
         """
         self.trader = trader
         self.order_factory = order_factory
-        self.conditional_order_factory = conditional_order_factory
         self.order_signer = order_signer
-        self.conditional_order_signer = conditional_order_signer
         self.order_tracker = order_tracker
         self.behavior_config = behavior_config
         self.api_client = api_client
@@ -219,7 +203,7 @@ class TraderSimulator:
         Select order type based on configured distribution.
 
         Returns:
-            Order type: 'market', 'limit', 'twap', 'stop_loss', 'good_after_time'
+            Order type: 'market' or 'limit'
         """
         config = self.behavior_config
         rand = random.random()
@@ -228,9 +212,6 @@ class TraderSimulator:
         for order_type, ratio in [
             ("market", config.market_order_ratio),
             ("limit", config.limit_order_ratio),
-            ("twap", config.twap_order_ratio),
-            ("stop_loss", config.stop_loss_order_ratio),
-            ("good_after_time", config.good_after_time_order_ratio),
         ]:
             cumulative += ratio
             if rand <= cumulative:
@@ -338,14 +319,7 @@ class TraderSimulator:
         await self._apply_think_time()
 
         try:
-            if order_type in ("market", "limit"):
-                await self._submit_standard_order(order_type)
-            elif order_type == "twap":
-                await self._submit_twap_order()
-            elif order_type == "stop_loss":
-                await self._submit_stop_loss_order()
-            elif order_type == "good_after_time":
-                await self._submit_good_after_time_order()
+            await self._submit_standard_order(order_type)
         except Exception as e:
             # Quote or submission failed - skip this order and continue
             # This matches production behavior: if quote fails, user must try again
@@ -436,126 +410,15 @@ class TraderSimulator:
         # Start monitoring in background with real UID
         self.order_tracker.start_monitoring(order_uid, self.api_client)
 
-    async def _submit_twap_order(self) -> None:
-        """Generate and submit a TWAP order.
-
-        Note: TWAP orders use on-chain submission via ComposableCow contract,
-        not the orderbook API. The UID for conditional orders would come from
-        the transaction receipt or events. Currently using temp UID for tracking.
-
-        TODO: Implement full conditional order lifecycle tracking:
-        1. Actually submit via composable_cow.submit_conditional_order()
-        2. Get order UID from transaction receipt or ConditionalOrderCreated event
-        3. Track token amounts from the generated ConditionalOrder
-        4. Implement on-chain event watching for order fills (not API polling)
-        5. For TWAP: track individual part executions over time
-        See: src/cow_performance/load_generation/composable_cow.py
-        """
-        # Generate TWAP order (returns ConditionalOrder with embedded TWAP params)
-        self.conditional_order_factory.create_twap_order()
-
-        # Track with temporary UID (conditional orders don't have API-generated UIDs)
-        temp_uid = f"twap_pending_{int(time.time() * 1000)}"
-        self.order_tracker.track_order(
-            order_uid=temp_uid,
-            owner=self.trader.address,
-            sell_token="0x0000000000000000000000000000000000000000",  # Placeholder
-            buy_token="0x0000000000000000000000000000000000000000",  # Placeholder
-            sell_amount="0",  # Placeholder
-            buy_amount="0",  # Placeholder
-            order_type="twap",
-        )
-
-        # Update status
-        self.order_tracker.update_order_status(temp_uid, OrderStatus.SUBMITTED)
-
-        # Mark as accepted (conditional orders don't go through orderbook API)
-        self.order_tracker.update_order_status(temp_uid, OrderStatus.ACCEPTED)
-
-        self.trader.increment_orders_submitted()
-        # Don't start API monitoring - conditional orders don't exist in orderbook API
-
-    async def _submit_stop_loss_order(self) -> None:
-        """Generate and submit a stop-loss order.
-
-        Note: Stop-loss orders use on-chain submission via ComposableCow contract,
-        not the orderbook API. The UID for conditional orders would come from
-        the transaction receipt or events. Currently using temp UID for tracking.
-
-        TODO: Implement full conditional order lifecycle tracking:
-        1. Actually submit via composable_cow.submit_conditional_order()
-        2. Get order UID from transaction receipt or ConditionalOrderCreated event
-        3. Track token amounts from the generated ConditionalOrder
-        4. Implement on-chain event watching for order fills (not API polling)
-        5. For Stop-Loss: monitor price oracle to detect trigger conditions
-        See: src/cow_performance/load_generation/composable_cow.py
-        """
-        # Generate stop-loss order (returns ConditionalOrder with embedded params)
-        self.conditional_order_factory.create_stop_loss_order()
-
-        # Track with temporary UID (conditional orders don't have API-generated UIDs)
-        temp_uid = f"stoploss_pending_{int(time.time() * 1000)}"
-        self.order_tracker.track_order(
-            order_uid=temp_uid,
-            owner=self.trader.address,
-            sell_token="0x0000000000000000000000000000000000000000",  # Placeholder
-            buy_token="0x0000000000000000000000000000000000000000",  # Placeholder
-            sell_amount="0",  # Placeholder
-            buy_amount="0",  # Placeholder
-            order_type="stop_loss",
-        )
-
-        # Update status
-        self.order_tracker.update_order_status(temp_uid, OrderStatus.SUBMITTED)
-
-        # Mark as accepted (conditional orders don't go through orderbook API)
-        self.order_tracker.update_order_status(temp_uid, OrderStatus.ACCEPTED)
-
-        self.trader.increment_orders_submitted()
-        # Don't start API monitoring - conditional orders don't exist in orderbook API
-
-    async def _submit_good_after_time_order(self) -> None:
-        """Generate and submit a good-after-time order.
-
-        Note: Good-after-time orders use on-chain submission via ComposableCow
-        contract, not the orderbook API. The UID for conditional orders would
-        come from the transaction receipt or events. Currently using temp UID.
-
-        TODO: Implement full conditional order lifecycle tracking:
-        1. Actually submit via composable_cow.submit_conditional_order()
-        2. Get order UID from transaction receipt or ConditionalOrderCreated event
-        3. Track token amounts from the generated ConditionalOrder
-        4. Implement on-chain event watching for order fills (not API polling)
-        5. For GAT: monitor block timestamps to detect when order becomes active
-        See: src/cow_performance/load_generation/composable_cow.py
-        """
-        # Generate good-after-time order (returns ConditionalOrder with embedded params)
-        self.conditional_order_factory.create_good_after_time_order()
-
-        # Track with temporary UID (conditional orders don't have API-generated UIDs)
-        temp_uid = f"gat_pending_{int(time.time() * 1000)}"
-        self.order_tracker.track_order(
-            order_uid=temp_uid,
-            owner=self.trader.address,
-            sell_token="0x0000000000000000000000000000000000000000",  # Placeholder
-            buy_token="0x0000000000000000000000000000000000000000",  # Placeholder
-            sell_amount="0",  # Placeholder
-            buy_amount="0",  # Placeholder
-            order_type="good_after_time",
-        )
-
-        # Update status
-        self.order_tracker.update_order_status(temp_uid, OrderStatus.SUBMITTED)
-
-        # Mark as accepted (conditional orders don't go through orderbook API)
-        self.order_tracker.update_order_status(temp_uid, OrderStatus.ACCEPTED)
-
-        self.trader.increment_orders_submitted()
-        # Don't start API monitoring - conditional orders don't exist in orderbook API
-
     async def _constant_rate_loop(self, duration: float) -> None:
         """Run trading loop with constant rate pattern."""
         end_time = time.time() + duration
+
+        # Spread out first submission to prevent thundering-herd at t=0.
+        # Cap at 30% of the interval so short tests are not significantly affected.
+        max_jitter = min(self._get_order_interval() * 0.3, 1.0)
+        initial_jitter = random.uniform(0, max_jitter)
+        await asyncio.sleep(min(initial_jitter, end_time - time.time()))
 
         while self._running and time.time() < end_time:
             await self._generate_and_submit_order()

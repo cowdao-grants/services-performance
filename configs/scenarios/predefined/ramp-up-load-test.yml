@@ -36,9 +36,6 @@ ramp_curve: "linear"      # Linear increase
 # Order type distribution
 market_order_ratio: 0.6
 limit_order_ratio: 0.4
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 
 # Use case: Test how orderbook handles gradually increasing load
 # - Identify breaking points

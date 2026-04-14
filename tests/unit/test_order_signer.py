@@ -1,14 +1,12 @@
 """
 Unit tests for order signing functionality.
 
-Tests EIP-712 signing for standard orders and conditional order creation.
+Tests EIP-712 signing for standard orders.
 """
 
 import pytest
 
 from cow_performance.load_generation import (
-    ConditionalOrderParams,
-    ConditionalOrderSigner,
     OrderFactory,
     OrderSigner,
     SigningScheme,
@@ -181,84 +179,3 @@ class TestOrderSigner:
         assert signed_order.signature is not None
         is_valid = order_signer.verify_signature(signed_order)
         assert is_valid is True
-
-
-class TestConditionalOrderSigner:
-    """Tests for ConditionalOrderSigner class."""
-
-    @pytest.fixture
-    def chain_id(self):
-        """Test chain ID."""
-        return 1
-
-    @pytest.fixture
-    def composable_cow_contract(self):
-        """Test ComposableCow contract address."""
-        return "0xfdaFc9d1902f4e0b84f65F49f244b32b31013b74"
-
-    @pytest.fixture
-    def conditional_signer(self, chain_id, composable_cow_contract):
-        """Create conditional order signer fixture."""
-        return ConditionalOrderSigner(chain_id, composable_cow_contract)
-
-    @pytest.fixture
-    def trader(self):
-        """Create trader fixture."""
-        return TraderAccount.generate()
-
-    def test_create_conditional_order_with_presign(self, conditional_signer, trader):
-        """Test creating conditional order with PRESIGN scheme."""
-        params = ConditionalOrderParams(
-            handler="0x0000000000000000000000000000000000000001",
-            salt="0x" + "00" * 32,
-            staticInput="0x1234",
-        )
-
-        conditional_order = conditional_signer.create_conditional_order(
-            params=params,
-            owner=trader.address,
-            signing_scheme=SigningScheme.PRESIGN,
-        )
-
-        assert conditional_order is not None
-        assert conditional_order.owner == trader.address
-        assert conditional_order.signingScheme == SigningScheme.PRESIGN
-        assert conditional_order.params == params
-
-    def test_create_conditional_order_with_eip1271(self, conditional_signer, trader):
-        """Test creating conditional order with EIP1271 scheme."""
-        params = ConditionalOrderParams(
-            handler="0x0000000000000000000000000000000000000001",
-            salt="0x" + "00" * 32,
-            staticInput="0x1234",
-        )
-
-        conditional_order = conditional_signer.create_conditional_order(
-            params=params,
-            owner=trader.address,
-            signing_scheme=SigningScheme.EIP1271,
-        )
-
-        assert conditional_order is not None
-        assert conditional_order.owner == trader.address
-        assert conditional_order.signingScheme == SigningScheme.EIP1271
-
-    def test_create_conditional_order_checksums_owner(self, conditional_signer):
-        """Test that owner address is checksummed."""
-        params = ConditionalOrderParams(
-            handler="0x0000000000000000000000000000000000000001",
-            salt="0x" + "00" * 32,
-            staticInput="0x1234",
-        )
-
-        # Use lowercase address
-        lowercase_address = "0xabcdef0123456789abcdef0123456789abcdef01"
-
-        conditional_order = conditional_signer.create_conditional_order(
-            params=params,
-            owner=lowercase_address,
-        )
-
-        # Should be checksummed
-        assert conditional_order.owner != lowercase_address
-        assert conditional_order.owner.startswith("0x")

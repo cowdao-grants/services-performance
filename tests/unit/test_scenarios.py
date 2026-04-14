@@ -160,11 +160,8 @@ class TestScenarioConfig:
         """Test ratio validation with valid ratios."""
         scenario = ScenarioConfig(
             name="test",
-            market_order_ratio=0.4,
+            market_order_ratio=0.6,
             limit_order_ratio=0.4,
-            twap_order_ratio=0.1,
-            stop_loss_order_ratio=0.05,
-            good_after_time_order_ratio=0.05,
         )
         # Should not raise
         scenario.validate_ratios()
@@ -173,11 +170,8 @@ class TestScenarioConfig:
         """Test ratio validation with invalid ratios."""
         scenario = ScenarioConfig(
             name="test",
-            market_order_ratio=0.5,
-            limit_order_ratio=0.5,
-            twap_order_ratio=0.1,
-            stop_loss_order_ratio=0.05,
-            good_after_time_order_ratio=0.05,
+            market_order_ratio=0.3,
+            limit_order_ratio=0.3,
         )
         with pytest.raises(ValueError, match="must sum to 1.0"):
             scenario.validate_ratios()
@@ -232,9 +226,6 @@ trading_pattern: constant_rate
 base_rate: 300.0
 market_order_ratio: 0.7
 limit_order_ratio: 0.3
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 """
         with TemporaryDirectory() as tmpdir:
             scenario_path = Path(tmpdir) / "enhanced.yml"
@@ -263,9 +254,6 @@ trading_pattern: constant_rate
 base_rate: 60.0
 market_order_ratio: 0.5
 limit_order_ratio: 0.5
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 """
         with TemporaryDirectory() as tmpdir:
             scenario_path = Path(tmpdir) / "old.yml"

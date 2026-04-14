@@ -16,7 +16,6 @@ from cow_performance.api import InstrumentedOrderbookClient, OrderbookClient
 from cow_performance.baselines import BaselineManager
 from cow_performance.cli.live_display import create_performance_metrics_dict
 from cow_performance.load_generation import (
-    ConditionalOrderFactory,
     OrchestrationConfig,
     OrderFactory,
     OrderSigner,
@@ -27,7 +26,6 @@ from cow_performance.load_generation import (
     TradingPattern,
     create_mainnet_token_registry,
 )
-from cow_performance.load_generation.order_signer import ConditionalOrderSigner
 from cow_performance.metrics import ExpirationChecker, MetricsStore
 from cow_performance.monitoring import ResourceMonitor, ResourceMonitorConfig
 from cow_performance.prometheus import PrometheusExporter
@@ -51,7 +49,7 @@ def _register_shutdown_handlers(orchestrator: TraderOrchestrator) -> None:
     Args:
         orchestrator: The TraderOrchestrator whose tasks will be cancelled
     """
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     shutdown_called = False
 
     def _handle_shutdown() -> None:
@@ -84,6 +82,9 @@ async def update_prometheus_metrics(
         target_rate: Target orders per second
     """
     start_time = time.time()
+    _WINDOW = 30.0  # seconds for the sliding-window rate estimate
+    # Ring-buffer of (timestamp, cumulative_count) samples
+    _samples: list[tuple[float, int]] = []
 
     while orchestrator._running:
         elapsed = time.time() - start_time
@@ -92,9 +93,20 @@ async def update_prometheus_metrics(
         progress_percent = min(100.0, (elapsed / test_duration) * 100)
         exporter.update_progress(progress_percent)
 
-        # Calculate actual rate
+        # Calculate actual rate over a 30-second sliding window so the
+        # displayed rate reflects current throughput, not the cumulative
+        # average from t=0 (which is inflated by the initial burst).
         total_orders = orchestrator.trader_pool.get_total_orders_submitted()
-        actual_rate = total_orders / elapsed if elapsed > 0 else 0.0
+        now = time.time()
+        _samples.append((now, total_orders))
+        cutoff = now - _WINDOW
+        _samples = [(t, c) for t, c in _samples if t >= cutoff]
+        if len(_samples) >= 2:
+            dt = _samples[-1][0] - _samples[0][0]
+            dc = _samples[-1][1] - _samples[0][1]
+            actual_rate = dc / dt if dt > 0 else 0.0
+        else:
+            actual_rate = total_orders / elapsed if elapsed > 0 else 0.0
 
         # Update throughput metrics
         exporter.update_throughput(
@@ -114,6 +126,7 @@ async def run_performance_test(
     verbose: bool = False,
     dry_run: bool = False,
     prometheus_port: int | None = None,
+    prometheus_exporter: "PrometheusExporter | None" = None,
 ) -> dict[str, Any]:
     """Run a performance test with the given configuration.
 
@@ -189,8 +202,9 @@ async def run_performance_test(
     # Create token registry
     token_registry = create_mainnet_token_registry()
 
-    # Filter token pairs to only use funded tokens if wallet funding is enabled
-    if config.wallet.funding_enabled and config.wallet.token_balances:
+    # Filter token pairs to only use tokens listed in token_balances (if specified).
+    # This applies even when funding_enabled=False (e.g. pre-funded wallets in scaling steps).
+    if config.wallet.token_balances:
         funded_tokens = set(config.wallet.token_balances.keys())
         all_pairs = token_registry.get_all_pairs()
         filtered_pairs = [
@@ -216,22 +230,22 @@ async def run_performance_test(
 
     # Fund wallets if enabled (requires Anvil fork mode)
     if config.wallet.funding_enabled:
-        if verbose:
-            console.print("[bold cyan]Wallet Funding:[/bold cyan]")
-            console.print(f"  RPC URL: {config.network.rpc_url}")
-            console.print(f"  ETH per wallet: {config.wallet.eth_balance}")
-            console.print(f"  Token balances: {config.wallet.token_balances}")
-
         try:
             # Connect to Web3
+            console.print(f"Connecting to RPC at {config.network.rpc_url}...")
             web3 = Web3(Web3.HTTPProvider(config.network.rpc_url))
             if not web3.is_connected():
                 raise ValueError(f"Failed to connect to RPC at {config.network.rpc_url}")
 
+            console.print(
+                f"[green]✓[/green] Connected (chain {web3.eth.chain_id}). "
+                f"Funding {trader_pool.get_pool_size()} wallets..."
+            )
+
             if verbose:
-                console.print(
-                    f"  [green]✓[/green] Connected to RPC (chain ID: {web3.eth.chain_id})"
-                )
+                console.print(f"  RPC URL: {config.network.rpc_url}")
+                console.print(f"  ETH per wallet: {config.wallet.eth_balance}")
+                console.print(f"  Token balances: {config.wallet.token_balances}")
 
             # Fund all traders in the pool
             fund_trader_pool(
@@ -242,9 +256,8 @@ async def run_performance_test(
                 vault_relayer=config.network.vault_relayer,
             )
 
+            console.print(f"[green]✓[/green] Funded {trader_pool.get_pool_size()} wallets")
             if verbose:
-                console.print(f"  [green]✓[/green] Funded {trader_pool.get_pool_size()} wallets")
-                # Print wallet addresses for verification
                 for i, trader in enumerate(trader_pool.get_all_traders()):
                     console.print(f"    Wallet {i+1}: {trader.address}")
                 console.print()
@@ -264,7 +277,6 @@ async def run_performance_test(
         console.print("  [yellow]Note: Funding disabled. Wallets may not have balance.[/yellow]")
         console.print()
 
-    # Create order factories
     # Set amount range: use explicit config values if set, otherwise calculate from wallet funding
     if config.min_order_amount and config.max_order_amount:
         # Use explicitly configured order amounts
@@ -309,28 +321,28 @@ async def run_performance_test(
         chain_id=config.network.chain_id,
         settlement_contract=config.network.settlement_contract,
         amount_range=amount_range,
-        valid_duration=60,  # 60 seconds for expiration testing
+        valid_duration=180,  # 3 minutes — clears CoW's ~60s minimum; orders expire before next step (inter-step gap = 240s)
         fee_percentage=0.0,  # Zero fees (CoW Protocol calculates fees automatically)
         api_client=api_client,  # Pass API client for getting quotes
     )
 
-    # Use a dummy Safe address for conditional orders (will be replaced with actual Safe per trader)
-    dummy_safe_address = "0x0000000000000000000000000000000000000001"
-    conditional_order_factory = ConditionalOrderFactory(
-        token_pair_registry=token_registry,
-        chain_id=config.network.chain_id,
-        safe_wallet_address=dummy_safe_address,
-    )
+    # Upload appData documents so the orderbook can validate quotes that reference them
+    if api_client is not None:
+        try:
+            await api_client.upload_app_data_with_retry(
+                order_factory.market_app_data_hash, order_factory.market_app_data_doc
+            )
+            await api_client.upload_app_data_with_retry(
+                order_factory.limit_app_data_hash, order_factory.limit_app_data_doc
+            )
+            console.print("[green]✓[/green] App data uploaded")
+        except Exception as e:
+            console.print(f"[yellow]Warning:[/yellow] App data upload failed: {e}")
 
-    # Create order signers
+    # Create order signer
     order_signer = OrderSigner(
         chain_id=config.network.chain_id,
         settlement_contract=config.network.settlement_contract,
-    )
-
-    conditional_order_signer = ConditionalOrderSigner(
-        chain_id=config.network.chain_id,
-        composable_cow_contract=config.network.composable_cow_contract,
     )
 
     # Create shared metrics store for all components
@@ -342,14 +354,17 @@ async def run_performance_test(
         check_interval=5.0,  # Check every 5 seconds
     )
 
-    # Start Prometheus exporter if port specified
-    prometheus_exporter: PrometheusExporter | None = None
-    if prometheus_port is not None:
+    # Start Prometheus exporter if port specified or a pre-created one is provided
+    _exporter_owned = False  # track whether we created it (and must stop it)
+    if prometheus_exporter is None and prometheus_port is not None:
         prometheus_exporter = PrometheusExporter(
             port=prometheus_port,
             scenario=config.trading_pattern,  # Use trading pattern as scenario name
         )
         prometheus_exporter.start()
+        _exporter_owned = True
+
+    if prometheus_exporter is not None:
         prometheus_exporter.register_with_store(metrics_store)
 
         # Set initial test metadata
@@ -358,9 +373,8 @@ async def run_performance_test(
         prometheus_exporter.set_test_start()
 
         if verbose:
-            console.print(
-                f"[cyan]Prometheus Exporter:[/cyan] http://localhost:{prometheus_port}/metrics"
-            )
+            port_str = str(prometheus_exporter.port)
+            console.print(f"[cyan]Prometheus Exporter:[/cyan] http://localhost:{port_str}/metrics")
             console.print()
 
     # Create order tracker with metrics store
@@ -376,9 +390,6 @@ async def run_performance_test(
         base_rate=config.base_rate,
         market_order_ratio=config.market_order_ratio,
         limit_order_ratio=config.limit_order_ratio,
-        twap_order_ratio=config.twap_order_ratio,
-        stop_loss_order_ratio=config.stop_loss_order_ratio,
-        good_after_time_order_ratio=config.good_after_time_order_ratio,
         # Random interval parameters
         min_interval=config.min_interval,
         max_interval=config.max_interval,
@@ -448,9 +459,7 @@ async def run_performance_test(
     orchestrator = TraderOrchestrator(
         trader_pool=trader_pool,
         order_factory=order_factory,
-        conditional_order_factory=conditional_order_factory,
         order_signer=order_signer,
-        conditional_order_signer=conditional_order_signer,
         order_tracker=order_tracker,
         default_behavior_config=behavior_config,
         orchestration_config=orchestration_config,
@@ -500,8 +509,8 @@ async def run_performance_test(
                 start_time = datetime.now()
 
                 if prometheus_exporter:
-                    # Calculate target rate from behavior config (orders per minute -> per second)
-                    target_rate = behavior_config.base_rate / 60.0
+                    # Total target rate across all traders (orders/min/trader → orders/sec total)
+                    target_rate = behavior_config.base_rate / 60.0 * num_traders
 
                     # Run orchestrator and metrics update loop concurrently
                     metrics_task = asyncio.create_task(
@@ -537,8 +546,8 @@ async def run_performance_test(
         if resource_monitor:
             await resource_monitor.stop()
 
-        # Stop Prometheus exporter
-        if prometheus_exporter:
+        # Stop Prometheus exporter only if we created it
+        if prometheus_exporter and _exporter_owned:
             prometheus_exporter.stop()
 
     # Get metrics

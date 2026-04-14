@@ -25,9 +25,6 @@ class TestConfigValidator:
             duration=120,
             market_order_ratio=0.7,
             limit_order_ratio=0.3,
-            twap_order_ratio=0.0,
-            stop_loss_order_ratio=0.0,
-            good_after_time_order_ratio=0.0,
             trading_pattern="constant_rate",
             base_rate=60,
         )
@@ -181,9 +178,6 @@ class TestConfigValidator:
             duration=120,
             market_order_ratio=0.0,
             limit_order_ratio=0.0,
-            twap_order_ratio=0.0,
-            stop_loss_order_ratio=0.0,
-            good_after_time_order_ratio=0.0,
             trading_pattern="constant_rate",
             base_rate=60,
         )
@@ -203,9 +197,6 @@ class TestConfigValidator:
             duration=120,
             market_order_ratio=1.0,
             limit_order_ratio=0.0,
-            twap_order_ratio=0.0,
-            stop_loss_order_ratio=0.0,
-            good_after_time_order_ratio=0.0,
             trading_pattern="constant_rate",
             base_rate=60,
         )

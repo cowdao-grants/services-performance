@@ -32,11 +32,8 @@ duration: 1800  # 30 minutes
 startup_interval: 0.1
 
 # Order type distribution - realistic mix
-market_order_ratio: 0.45
-limit_order_ratio: 0.45
-twap_order_ratio: 0.05
-stop_loss_order_ratio: 0.03
-good_after_time_order_ratio: 0.02
+market_order_ratio: 0.5
+limit_order_ratio: 0.5
 
 # Trading pattern - constant rate for stability testing
 trading_pattern: constant_rate

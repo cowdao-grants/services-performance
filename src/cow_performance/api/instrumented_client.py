@@ -322,6 +322,44 @@ class InstrumentedOrderbookClient:
             )
             raise
 
+    async def get_quote(
+        self,
+        sell_token: str,
+        buy_token: str,
+        sell_amount: str,
+        from_address: str,
+        kind: str = "sell",
+        app_data: str | None = None,
+        validity_seconds: int = 1800,
+    ) -> dict[str, Any]:
+        """Get a quote (delegates to underlying client)."""
+        return await self._client.get_quote(
+            sell_token=sell_token,
+            buy_token=buy_token,
+            sell_amount=sell_amount,
+            from_address=from_address,
+            kind=kind,
+            app_data=app_data,
+            validity_seconds=validity_seconds,
+        )
+
+    async def cancel_orders(
+        self,
+        order_uids: list[str],
+        signature: str,
+        signing_scheme: str = "eip712",
+    ) -> dict[str, Any]:
+        """Cancel multiple orders (delegates to underlying client)."""
+        return await self._client.cancel_orders(
+            order_uids=order_uids,
+            signature=signature,
+            signing_scheme=signing_scheme,
+        )
+
+    async def get_account_orders(self, owner: str, limit: int = 1000) -> list[dict[str, Any]]:
+        """Get all orders for an account (delegates to underlying client)."""
+        return await self._client.get_account_orders(owner, limit=limit)
+
     async def get_open_order_count(self, owner: str) -> int:
         """Get count of open orders for an account (delegates to underlying client)."""
         return await self._client.get_open_order_count(owner)
