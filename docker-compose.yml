@@ -170,7 +170,7 @@ services:
       - SETTLEMENT_CONTRACT_ADDRESS=0x9008D19f58AAbD9eD0D60971565AA8510560ab41
       - SETTLEMENT_CONTRACT_START_INDEX=24679094
       - LOG_FILTER=warn,autopilot=info,shared=info
-      - DRIVERS=baseline|http://driver/baseline|${SOLVER_ADDRESS:-0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266}
+      - DRIVERS=baseline|http://driver/baseline|0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266,baseline-2|http://driver/baseline-2|0x70997970C51812dc3A010C7d01b50e0d17dc79C8,baseline-3|http://driver/baseline-3|0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC,baseline-4|http://driver/baseline-4|0x90F79bf6EB2c4f870365E785982E1f101E93b906,baseline-5|http://driver/baseline-5|0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65
       - PRICE_ESTIMATION_DRIVERS=baseline|http://driver/baseline
       - NATIVE_PRICE_ESTIMATORS=baseline|http://driver/baseline
       - SETTLE_INTERVAL=120s
