@@ -17,10 +17,10 @@ examples/
 
 ```bash
 # Run your first test
-cow-perf run --scenario examples/getting-started/01-minimal.yml
+cow-perf run --config examples/getting-started/01-minimal.yml
 
 # Run a standard 5-minute test
-cow-perf run --scenario examples/getting-started/03-standard-test.yml
+cow-perf run --config examples/getting-started/03-standard-test.yml
 
 # Create and use templates
 cow-perf config-init --mode template
@@ -64,18 +64,18 @@ cow-perf config-init --mode template
 
 ```bash
 # Run a scenario
-cow-perf run --scenario examples/getting-started/01-minimal.yml
+cow-perf run --config examples/getting-started/01-minimal.yml
 
-# Run with a profile
-cow-perf run --scenario examples/advanced/multi-profile-example.yml --profile dev
+# Run a scenario and save as baseline
+cow-perf run --config examples/advanced/multi-profile-example.yml \
+  --save-baseline my-baseline
 
 # Create and save baseline
-cow-perf run --scenario examples/comparison/simple-comparison.yml \
+cow-perf run --config examples/comparison/simple-comparison.yml \
   --save-baseline my-baseline
 
 # Compare against baseline
-cow-perf run --scenario examples/comparison/simple-comparison.yml \
-  --baseline my-baseline
+cow-perf report generate my-new-baseline --compare my-baseline
 
 # List all scenarios
 cow-perf scenarios
