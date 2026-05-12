@@ -2,16 +2,6 @@
 
 Comprehensive performance testing suite for the CoW Protocol Playground, enabling load testing, benchmarking, and regression detection using Anvil fork mode.
 
-## Features
-
-- **Load Generation**: Simulate realistic trading patterns with configurable strategies
-- **Performance Benchmarking**: Measure order lifecycle, API performance, and resource utilization
-- **Metrics & Visualization**: Prometheus exporters and Grafana dashboards
-- **Regression Detection**: Statistical comparison against baselines
-- **Fork Mode Testing**: Test against mainnet state using Anvil fork mode
-- **Scenario Library**: Predefined scenarios from light to heavy loads
-- **Flexible Configuration**: YAML-based scenarios with inheritance and composition
-
 ## Quick Start
 
 ### Prerequisites
@@ -61,10 +51,11 @@ Comprehensive performance testing suite for the CoW Protocol Playground, enablin
    > **Note**: First startup may show "unhealthy" errors while orderbook compiles
    > (takes 5-10 minutes). Check progress: `docker compose logs -f orderbook`
 
-4. **Verify installation**
+4. **Verify services are healthy**
    ```bash
-   cow-perf version
+   docker compose ps
    ```
+   All services should show `healthy` or `running`. If `orderbook` is still starting, wait and re-check — first compile takes 5-10 minutes.
 
 5. **Run your first test**
 
@@ -87,6 +78,7 @@ The suite includes 5 production-ready scenarios with automated validation:
 
 | Scenario | Duration | Purpose | Success Criteria |
 |----------|----------|---------|------------------|
+| **light-load** | 2 min | Quick smoke test, Quick Start default | ≥85% success, <20s P95 latency |
 | **regression-test** | 2 min | Fast CI/CD regression testing | ≥90% success, <15s P95 latency |
 | **sustained-load** | 30 min | Long-term stability, memory leak detection | ≥80% success, <25s P95 latency |
 | **large-orders** | 5 min | Edge case testing with whale trades (100+ ETH) | ≥70% success, <40s P95 latency |
@@ -290,6 +282,8 @@ cow-performance-testing-suite/
 
 ---
 
+---
+
 ## Known Limitations
 
 ### Anvil Fork Mode - Event Synchronization Issue
@@ -360,11 +354,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ## Roadmap
 
-- [x] **Milestone 1**: Project Setup & Load Generation Framework
-- [x] **Milestone 2**: User Simulation Module (TraderPool, Safe wallets, hooks)
-- [x] **Milestone 3**: CLI Tool Interface
-- [x] **Milestone 4**: Performance Benchmarking & Metrics
-- [x] **Milestone 5**: Advanced Features & Documentation
+See [GitHub Issues](https://github.com/cowprotocol/cow-performance-testing-suite/issues) and [Milestones](https://github.com/cowprotocol/cow-performance-testing-suite/milestones) for planned work and known issues.
 
 ---
 
