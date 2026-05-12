@@ -6,10 +6,10 @@ Comprehensive performance testing suite for the CoW Protocol Playground, enablin
 
 ### Prerequisites
 
-- Python 3.11+
-- Poetry **or** venv (choose your preferred dependency manager)
-- Docker and Docker Compose
-- Ethereum RPC URL (Alchemy, Infura, etc.)
+- [Python 3.11+](https://www.python.org/downloads/)
+- [Poetry](https://python-poetry.org/docs/#installation) **or** venv (built into Python — choose your preferred dependency manager)
+- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) (v2+)
+- Ethereum RPC URL — [Alchemy](https://www.alchemy.com/) or [Infura](https://www.infura.io/) (free tier works)
 
 ### Setup (5 Steps)
 
