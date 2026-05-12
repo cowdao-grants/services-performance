@@ -202,14 +202,17 @@ The comparison report shows:
 
 **⚠️ Regressions:** Metrics that got worse (with severity)
 ```
-- fill_latency_p95: +45.2% (regressed from 8.2s to 11.9s) [MAJOR]
-- error_rate: +10.0% (regressed from 5% to 5.5%) [MINOR]
+- fill_latency_p95: +45.2% (regressed from 8.2s to 11.9s) [CRITICAL]
+- submission_latency_p90: +18.3% (regressed from 6.0s to 7.1s) [MAJOR]
+- error_rate: +1.1pp (regressed from 5.0% to 6.1%) [MINOR]
 ```
 
-**Severity Levels:**
-- **MINOR**: <10% change or within acceptable threshold
-- **MAJOR**: 10-25% change or significant impact
-- **CRITICAL**: >25% change or test failure
+**Severity Levels (default thresholds, latency):**
+- **MINOR**: >=10% change
+- **MAJOR**: >=15% change
+- **CRITICAL**: >=30% change
+
+> Thresholds differ by metric type. Throughput uses >=10%/>=25%/>=50% for minor/major/critical. Resource uses >=10%/>=20%/>=50% for minor/major/critical. Error rate uses >=1pp/>=2pp/>=5pp for minor/major/critical. Override with `COW_PERF_THRESHOLD_FILE` or `COW_PERF_THRESHOLD_PROFILE` env vars.
 
 **📊 Percent Changes:** For all key metrics
 
@@ -224,8 +227,8 @@ Use exit codes for automated failure detection:
 cow-perf report generate current --compare baseline
 
 # Exit codes:
-# 0 = No regressions detected
-# 2 = Performance regression detected
+# 0 = Report verdict is SUCCESS or WARNING
+# 2 = Report verdict is FAILURE
 # 1 = Error (invalid arguments, missing files)
 ```
 
@@ -236,13 +239,15 @@ cow-perf report generate current --compare baseline
     cow-perf run --config configs/scenarios/predefined/enhanced/regression-test.yml --save-baseline current
 
 - name: Compare against baseline
+  id: compare
+  continue-on-error: true
   run: |
     cow-perf report generate current --compare baseline -f markdown --save
 
-- name: Check for regressions
+- name: Check for test failure
   run: |
-    if [ $? -eq 2 ]; then
-      echo "❌ Performance regression detected!"
+    if [ "${{ steps.compare.outcome }}" = "failure" ]; then
+      echo "Performance test failed (report verdict is FAILURE)"
       exit 1
     fi
 ```
@@ -418,7 +423,7 @@ See `.cow-perf/README.md` in your project directory for detailed documentation o
 
 ## Grafana Comparison Dashboard
 
-The provisioned Grafana comparison dashboard (`CoW Performance — Comparison`) visualizes data from the `cow_perf_baseline_comparison_percent`, `cow_perf_regression_detected`, and `cow_perf_regressions_total` metrics. These metrics are only exported when a comparison is performed with `--prometheus-port 9091`.
+The provisioned Grafana comparison dashboard (`CoW Performance — Comparison`) visualizes data from the `cow_perf_baseline_comparison_percent`, `cow_perf_regression_detected`, and `cow_perf_regressions_total` metrics. These metrics are only exported when `cow-perf run` is invoked with `--prometheus-port 9091` and a comparison is subsequently generated.
 
 **If the dashboard shows empty panels:**
 
@@ -437,7 +442,7 @@ cow-perf run --config configs/scenarios/predefined/enhanced/regression-test.yml 
   --prometheus-port 9091 --save-baseline "v2.0"
 
 # 3. Generate comparison (exports comparison metrics to Prometheus)
-cow-perf report generate v2.0 --compare v1.0 --prometheus-port 9091
+cow-perf report generate v2.0 --compare v1.0
 
 # 4. Open Grafana comparison dashboard — select baseline_id = v2.0
 open http://localhost:3000

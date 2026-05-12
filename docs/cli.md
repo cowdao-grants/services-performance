@@ -65,9 +65,9 @@ cow-perf config --save-template .cow-perf.yml
 # Network settings
 network:
   chain_id: 1  # 1=Mainnet, 100=Gnosis Chain
-  rpc_url: "https://eth.llamarpc.com"
+  rpc_url: "http://localhost:8545"
   settlement_contract: "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"
-  composable_cow_contract: "0xfdaFc9d1902f4e0b84f65F49f244b32b31013b74"
+  vault_relayer: "0xC92E8bdf79f0507f65a392b0ab4667716BFE0110"
 
 # API settings
 api:
@@ -79,8 +79,8 @@ api:
 output:
   format: "json"  # json, table, csv, prometheus
   verbose: false
-  save_results: true
-  results_dir: "~/.cow-perf/results"
+  save_results: false
+  results_dir: ".cow-perf/results"
 
 # Wallet configuration for trader accounts
 wallet:
@@ -102,18 +102,15 @@ default_startup_interval: 0.1
 prometheus_port: 9091  # Port for metrics exporter (null or 0 to disable)
 
 # Order type distribution (must sum to 1.0)
-market_order_ratio: 0.4
-limit_order_ratio: 0.4
-twap_order_ratio: 0.1
-stop_loss_order_ratio: 0.05
-good_after_time_order_ratio: 0.05
+market_order_ratio: 0.5
+limit_order_ratio: 0.5
 ```
 
 ### Load Configuration
 
 ```bash
 # Load from specific file
-cow-perf run --config ./my-config.yml --scenario light-load
+cow-perf run --config ./my-config.yml
 
 # Config file search order:
 # 1. --config flag (highest priority)
@@ -141,7 +138,7 @@ export COW_OUTPUT_FORMAT=table
 export COW_OUTPUT_VERBOSE=true
 
 # Run with overrides
-cow-perf run --scenario light-load
+cow-perf run --config configs/scenarios/predefined/light-load.yml
 ```
 
 ### Configuration Precedence
@@ -175,7 +172,7 @@ Scenarios define complete test configurations including trader count, duration, 
 ### List Available Scenarios
 
 ```bash
-# List scenarios in default directory (~/.cow-perf/scenarios)
+# List scenarios in default directory (.cow-perf/scenarios, project-local)
 cow-perf scenarios
 
 # List scenarios in custom directory
@@ -195,7 +192,7 @@ cow-perf scenarios --list-templates
 ```
 
 **Available Options:**
-- `--dir` - Scenarios directory (default: ~/.cow-perf/scenarios)
+- `--dir` - Scenarios directory (default: `.cow-perf/scenarios`, project-local)
 - `--tag/-t` - Filter by tag (can specify multiple, must match ALL)
 - `--search/-s` - Filter by name or description
 - `--simple` - Show simple view without metadata
@@ -330,36 +327,33 @@ cow-perf baselines --delete v1.0
 Execute performance tests with configured scenarios:
 
 ```bash
-# Run with predefined scenario
-cow-perf run --scenario light-load
+# Run with predefined scenario file
+cow-perf run --config configs/scenarios/predefined/light-load.yml
 
 # Run with custom scenario file
-cow-perf run --scenario ./my-scenario.yml
+cow-perf run --config ./my-scenario.yml
 
 # Run with custom parameters
 cow-perf run --traders 20 --duration 300
 
-# Run and compare against baseline
-cow-perf run --scenario medium-load --baseline v1.0
-
-# Run with specific configuration
-cow-perf run --config ./config.yml --scenario light-load
+# Run with specific configuration file
+cow-perf run --config ./config.yml
 ```
 
 ### Available Run Options
 
-- `--config/-c` - Configuration file path
-- `--scenario/-s` - Scenario name or file path
+- `--config/-c` - Path to scenario or configuration file
 - `--traders/-t` - Number of concurrent traders
 - `--duration/-d` - Test duration in seconds
-- `--settlement-wait/-w` - Settlement wait time in seconds (default: 300)
-- `--baseline/-B` - Baseline to compare against
+- `--settlement-wait/-w` - Settlement wait time in seconds (default: 180)
 - `--save-baseline/-b` - Save results as baseline with given name
 - `--baseline-description` - Description for saved baseline
 - `--baseline-tags` - Comma-separated tags for baseline (e.g. "production,v1.0")
 - `--prometheus-port` - Port for Prometheus metrics exporter (default: 9091, 0 to disable)
-- `--output-format` - Output format: json, table, csv, prometheus
-- `--save-results` - Save results to file
+- `--format/-f` - Output format: json, table, csv, prometheus
+- `--save/-s` - Save results to file
+- `--output/-o` - Output file path
+- `--dry-run` - Validate and simulate without submitting orders
 - `--verbose/-v` - Enable verbose logging
 
 ### Real-Time Metrics Export
@@ -397,16 +391,16 @@ The CLI supports multiple output formats for different use cases:
 
 ```bash
 # JSON output - for programmatic processing and APIs
-cow-perf run --config my-test.yml --output-format json --save-results
+cow-perf run --config my-test.yml --format json --save
 
 # Table output - human-readable terminal display (default for console)
-cow-perf run --config my-test.yml --output-format table
+cow-perf run --config my-test.yml --format table
 
 # CSV output - for spreadsheet analysis and data processing
-cow-perf run --config my-test.yml --output-format csv --save-results
+cow-perf run --config my-test.yml --format csv --save
 
 # Prometheus format - for metrics collection and monitoring
-cow-perf run --config my-test.yml --output-format prometheus --save-results
+cow-perf run --config my-test.yml --format prometheus --save
 ```
 
 You can also configure the output format in your YAML config file:
@@ -415,47 +409,55 @@ You can also configure the output format in your YAML config file:
 output:
   format: "prometheus"  # json, table, csv, prometheus
   save_results: true
-  results_dir: "./results"
+  results_dir: ".cow-perf/results"
 ```
 
 ### Prometheus Output Format
 
-When using `--output-format prometheus`, the CLI generates metrics in Prometheus text exposition format, ready to be scraped or pushed to Prometheus.
+When using `--format prometheus`, the CLI generates metrics in Prometheus text exposition format, ready to be scraped or pushed to Prometheus.
 
 **Example Prometheus output:**
 
 ```
-# HELP cow_perf_orders_per_second CoW Protocol performance test metric
+# HELP cow_perf_orders_per_second Current order submission rate
 # TYPE cow_perf_orders_per_second gauge
-cow_perf_orders_per_second 0.6969890196125873
+cow_perf_orders_per_second{scenario="light-load"} 0.6969890196125873
 
-# HELP cow_perf_avg_order_latency_ms CoW Protocol performance test metric
-# TYPE cow_perf_avg_order_latency_ms gauge
-cow_perf_avg_order_latency_ms 1434.742832183838
+# HELP cow_perf_orders_submitted_total Total number of orders submitted to API
+# TYPE cow_perf_orders_submitted_total counter
+cow_perf_orders_submitted_total{scenario="light-load"} 5.0
 
-# HELP cow_perf_orders_total CoW Protocol performance test metric
-# TYPE cow_perf_orders_total gauge
-cow_perf_orders_total 5.0
+# HELP cow_perf_orders_filled_total Total number of orders successfully filled
+# TYPE cow_perf_orders_filled_total counter
+cow_perf_orders_filled_total{scenario="light-load"} 4.0
 ```
 
 **Available Prometheus metrics:**
 
-Performance metrics:
-- `cow_perf_orders_per_second` - Throughput (orders/sec)
-- `cow_perf_avg_order_latency_ms` - Average order latency
+Throughput metrics:
+- `cow_perf_orders_per_second` - Current order submission rate (gauge)
+- `cow_perf_target_rate` - Configured target submission rate (gauge)
+- `cow_perf_actual_rate` - Measured actual submission rate (gauge)
 
-Order type metrics:
-- `cow_perf_orders_total` - Total orders submitted
-- `cow_perf_orders_market` - Market orders count
-- `cow_perf_orders_limit` - Limit orders count
-- `cow_perf_orders_twap` - TWAP orders count
-- `cow_perf_orders_stop_loss` - Stop-loss orders count
-- `cow_perf_orders_good_after_time` - Good-after-time orders count
+Order lifecycle counters:
+- `cow_perf_orders_created_total` - Total orders created
+- `cow_perf_orders_submitted_total` - Total orders submitted to API
+- `cow_perf_orders_filled_total` - Total orders successfully filled
+- `cow_perf_orders_failed_total` - Total orders that failed
+- `cow_perf_orders_expired_total` - Total orders that expired
+- `cow_perf_orders_active` - Currently active (non-terminal) orders (gauge)
 
-Orchestration metrics:
-- `cow_perf_duration_seconds` - Test duration
-- `cow_perf_traders_active` - Number of active traders
-- `cow_perf_traders_total` - Total number of traders
+Latency histograms:
+- `cow_perf_submission_latency_seconds` - Time from order creation to API submission
+- `cow_perf_orderbook_latency_seconds` - Time from submission to orderbook acceptance
+- `cow_perf_settlement_latency_seconds` - Time from acceptance to order fill
+- `cow_perf_order_lifecycle_seconds` - Total order lifecycle duration
+
+Test metadata:
+- `cow_perf_test_duration_seconds` - Configured test duration
+- `cow_perf_traders_active` - Count of currently active traders
+- `cow_perf_num_traders` - Number of simulated traders
+- `cow_perf_test_progress_percent` - Test completion percentage (0-100)
 
 ### Prometheus Integration
 
@@ -463,7 +465,7 @@ Orchestration metrics:
 
 ```bash
 # Run test and save Prometheus metrics
-cow-perf run --config test.yml --output-format prometheus --save-results
+cow-perf run --config test.yml --format prometheus --save
 
 # Push to Pushgateway
 cat results/perf-test-*.txt | \
@@ -474,16 +476,16 @@ cat results/perf-test-*.txt | \
 
 ```bash
 # Configure output directory to node exporter's textfile directory
-cow-perf run --config test.yml --output-format prometheus \
-  --output-file /var/lib/node_exporter/textfile_collector/cow_perf.prom
+cow-perf run --config test.yml --format prometheus \
+  --output /var/lib/node_exporter/textfile_collector/cow_perf.prom
 ```
 
 **3. Custom HTTP endpoint** (requires additional service):
 
 ```bash
 # Save to directory served by HTTP
-cow-perf run --config test.yml --output-format prometheus \
-  --output-file /var/www/metrics/cow_perf.txt
+cow-perf run --config test.yml --format prometheus \
+  --output /var/www/metrics/cow_perf.txt
 ```
 
 **Example Prometheus scrape config:**
@@ -553,7 +555,7 @@ docker run cow-performance-testing-suite --help
 
 # Run a scenario
 docker run -v $(pwd)/configs:/app/configs \
-  cow-performance-testing-suite run --scenario light-load
+  cow-performance-testing-suite run --config /app/configs/scenarios/predefined/light-load.yml
 ```
 
 ### Verifying the Environment
@@ -632,11 +634,13 @@ cow-perf report generate my-baseline
 # Generate markdown report with comparison
 cow-perf report generate v2.0 --compare v1.0 -f markdown --save
 
-# Export metrics as CSV
-cow-perf report generate my-baseline --export-csv ./csv/
+# Export metrics as CSV (writes to .cow-perf/reports/csv/)
+cow-perf report generate my-baseline --export-csv
 ```
 
-**Exit codes:** 0 = Success, 1 = Error, 2 = Performance regression detected
+**Valid formats:** `text` (default), `markdown`, `json`
+
+**Exit codes:** 0 = SUCCESS or WARNING verdict, 1 = Error (bad args/missing file), 2 = FAILURE verdict (success rate <80%)
 
 ---
 
@@ -665,23 +669,27 @@ vim scenarios/my-test.yml
 cow-perf scenarios --validate scenarios/my-test.yml
 
 # 7. Run test
-cow-perf run --scenario scenarios/my-test.yml
+cow-perf run --config scenarios/my-test.yml
 ```
 
 ### Baseline Comparison Workflow
 
 ```bash
 # 1. Run initial test and save as baseline
-cow-perf run --scenario load-test --save-baseline v1.0 \
+cow-perf run --config configs/scenarios/predefined/light-load.yml \
+  --save-baseline v1.0 \
   --baseline-description "Initial baseline before changes"
 
 # 2. Make changes to system
 # ... deploy updates, configuration changes, etc.
 
-# 3. Run test again and compare
-cow-perf run --scenario load-test --baseline v1.0
+# 3. Run test again and save as new baseline
+cow-perf run --config configs/scenarios/predefined/light-load.yml --save-baseline v2.0
 
-# 4. View baseline details
+# 4. Compare baselines
+cow-perf report generate v2.0 --compare v1.0
+
+# 5. View baseline details
 cow-perf baselines --show v1.0
 ```
 
@@ -690,17 +698,20 @@ cow-perf baselines --show v1.0
 ```bash
 # Test against local environment and save baseline
 export COW_API_BASE_URL=http://localhost:8080
-cow-perf run --scenario load-test --save-baseline local \
+cow-perf run --config configs/scenarios/predefined/light-load.yml \
+  --save-baseline local \
   --baseline-tags "environment:local"
 
 # Test against staging and save baseline
 export COW_API_BASE_URL=https://staging-api.cow.fi
-cow-perf run --scenario load-test --save-baseline staging \
+cow-perf run --config configs/scenarios/predefined/light-load.yml \
+  --save-baseline staging \
   --baseline-tags "environment:staging"
 
 # Test against production (read-only)
 export COW_API_BASE_URL=https://api.cow.fi
-cow-perf run --scenario read-only-test --save-baseline prod \
+cow-perf run --config configs/scenarios/predefined/light-load.yml \
+  --save-baseline prod \
   --baseline-tags "environment:production,read-only"
 
 # Compare results

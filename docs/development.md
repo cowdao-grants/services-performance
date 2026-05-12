@@ -372,9 +372,6 @@ pytest tests/unit
 # Run only integration tests
 pytest tests/integration -m integration
 
-# Run in parallel (faster)
-pytest -n auto
-
 # Run with verbose output
 pytest -v
 
@@ -762,7 +759,7 @@ pytest -vv
 ### Using cProfile
 
 ```bash
-python -m cProfile -o output.prof -m cow_performance.cli.main run --scenario light-load
+python -m cProfile -o output.prof $(which cow-perf) run --config light-load.yml
 ```
 
 ### Using line_profiler
@@ -787,24 +784,9 @@ def expensive_function():
 
 ### Building Documentation
 
-**With Poetry:**
-```bash
-# Install documentation dependencies
-poetry install --with docs
+The documentation files in `docs/` are plain Markdown files. No build step is required — they can be read directly or rendered by any Markdown viewer.
 
-# Build HTML documentation
-cd docs && make html
-```
-
-**With venv:**
-```bash
-# Install documentation dependencies
-source .venv/bin/activate
-pip install -e ".[docs]"
-
-# Build HTML documentation
-cd docs && make html
-```
+If you add a Sphinx or MkDocs setup in the future, update this section with the appropriate build commands.
 
 ## Common Tasks
 

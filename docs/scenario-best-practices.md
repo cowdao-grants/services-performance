@@ -223,16 +223,13 @@ Example: 10 traders × 60 orders/min = 600 orders/min system-wide
 
 ## Order Type Distribution
 
-All ratios must sum to **exactly 1.0**. See [configuration reference](configuration-reference.md#order-type-distribution) for standard distributions (balanced, high-throughput, conditional-heavy).
+All ratios must sum to **exactly 1.0**. See [configuration reference](configuration-reference.md#order-type-distribution) for standard distributions (balanced, high-throughput).
 
 **Single-type (testing specific functionality):**
 ```yaml
 # Limit orders only
 market_order_ratio: 0.0
 limit_order_ratio: 1.0
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 ```
 
 ---

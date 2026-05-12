@@ -326,10 +326,10 @@ docker compose logs autopilot | grep -i error
 docker compose logs driver | grep -i error
 
 # Check database state
-docker exec -it $(docker ps -qf "name=db") psql -U postgres -d database -c "SELECT COUNT(*) FROM orders;"
+docker exec -it $(docker ps -qf "name=db") psql -U postgres -d postgres -c "SELECT COUNT(*) FROM orders;"
 
 # Review test results
-cat ~/.cow-perf/results/latest-result.json | jq .
+cat .cow-perf/results/latest-result.json | jq .
 ```
 
 ### Recovery Procedures
@@ -355,7 +355,7 @@ watch -n 2 'docker compose ps'
 **Clear stuck orders:**
 ```bash
 # Connect to database
-docker exec -it $(docker ps -qf "name=db") psql -U postgres -d database
+docker exec -it $(docker ps -qf "name=db") psql -U postgres -d postgres
 
 # Clear orders table
 DELETE FROM orders;
@@ -449,7 +449,7 @@ A: Minimum 2 minutes for valid statistics, 5-10 minutes for reliable benchmarks,
 
 **Enable debug logging:**
 ```bash
-cow-perf --verbose run --config scenario.yml
+cow-perf run --verbose --config scenario.yml
 ```
 
 **Report issues:**

@@ -253,7 +253,7 @@ cow-perf config-init --mode advanced --output production-test.yml
 See all scenarios in a directory:
 
 ```bash
-# Default directory (configs/scenarios/)
+# Default directory (.cow-perf/scenarios/)
 cow-perf scenarios
 
 # Custom directory
@@ -322,9 +322,6 @@ Check if your scenario is valid:
 ```bash
 # Validate single file
 cow-perf scenarios --validate my-scenario.yml
-
-# Validate with verbose errors
-cow-perf scenarios --validate my-scenario.yml --verbose
 ```
 
 **What gets validated:**
@@ -369,61 +366,35 @@ cow-perf scenarios
 
 ## Running Tests
 
-### Important: Scenario vs. Config Files
+### Running with a Scenario File
 
-**Scenarios** (created with `config-init`):
-- Define **what** to test (traders, duration, patterns)
-- Used for organization and documentation
-- Cannot be run directly with `cow-perf run --config`
-
-**Config files** (`.cow-perf.yml`):
-- Define **how** to connect (network, API, wallet settings)
-- Required to actually run tests
-- Include or reference scenario parameters
-
-### Option 1: Use CLI Parameters (Recommended)
-
-The easiest way to run a test is to extract parameters from your scenario and pass them via CLI:
+Pass a scenario YAML file directly to `cow-perf run` using `--config`:
 
 ```bash
-# From scenario: 10 traders, 120s duration, constant rate at 60 orders/min
-cow-perf run --traders 10 --duration 120
+cow-perf run --config my-scenario.yml
 ```
 
-### Option 2: Create a Full Config File
-
-Create a `.cow-perf.yml` with network settings and scenario parameters:
-
-```yaml
-# .cow-perf.yml
-network:
-  chain_id: 1
-  rpc_url: "http://localhost:8545"
-
-api:
-  base_url: "http://localhost:8080"
-
-# Scenario parameters
-default_trader_count: 10
-default_duration: 120
-trading_pattern: "constant_rate"
-base_rate: 60.0
-market_order_ratio: 0.6
-limit_order_ratio: 0.4
-# ...
-```
-
-Then run:
-```bash
-cow-perf run --config .cow-perf.yml
-```
-
-### Option 3: Reference Scenario in Config
-
-Some scenarios (like those in `configs/scenarios/`) include full configuration:
+You can also pass a predefined scenario:
 
 ```bash
 cow-perf run --config configs/scenarios/predefined/light-load.yml
+```
+
+### Overriding Parameters at Run Time
+
+CLI flags override values from the scenario file:
+
+```bash
+# Use scenario file but override trader count and duration
+cow-perf run --config my-scenario.yml --traders 10 --duration 120
+```
+
+### Saving Results
+
+```bash
+cow-perf run --config my-scenario.yml \
+  --save-baseline my-baseline \
+  --baseline-description "Before feature X"
 ```
 
 ---
@@ -710,9 +681,9 @@ cow-perf config-init --mode quick --output my-first-scenario.yml
 
 **Cause:** Missing required fields or invalid values
 
-**Fix:** Use verbose validation to see details:
+**Fix:** Run validation to see details:
 ```bash
-cow-perf scenarios --validate my-scenario.yml --verbose
+cow-perf scenarios --validate my-scenario.yml
 ```
 
 Common issues:

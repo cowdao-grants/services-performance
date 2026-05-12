@@ -10,27 +10,23 @@ The wallet funding system automatically funds test wallets with ETH and tokens u
 
 ### ETH Funding
 
-ETH is transferred from Anvil's default account (funded with 10,000 ETH):
+ETH balances are set instantly using Anvil's `anvil_setBalance` RPC method:
 
 ```bash
-# Anvil provides default account: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-# Balance: 10,000 ETH
+# anvil_setBalance sets the balance of any address to a specified amount
+# No transaction is required — the balance is updated directly in Anvil's state
 ```
 
 ### Token Funding
 
-Tokens are added by manipulating storage slots:
+Tokens are funded by impersonating privileged accounts and calling token contracts directly:
 
-1. **Find Token Balance Slot**: Each ERC-20 token stores balances at a specific storage slot (varies by token)
-2. **Calculate Wallet Slot**: `keccak256(wallet_address, balance_slot)`
-3. **Set Balance**: Use `anvil_setStorageAt` RPC method to set balance
+- **WETH**: Each wallet is given extra ETH and then calls `deposit()` on the WETH9 contract to wrap it.
+- **DAI**: Impersonates `MCD_JOIN_DAI` (an authorized DAI ward) and calls `mint()` directly.
+- **USDC**: Impersonates the USDC `masterMinter`, configures itself as a minter, then calls `mint()` for each wallet.
+- **USDT / GNO**: Impersonates a large token holder (whale) and calls `transfer()`.
 
-**Example** (WETH at 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2):
-```python
-# WETH balance slot: 3
-wallet_slot = keccak256(wallet_address, 3)
-anvil_setStorageAt(WETH_address, wallet_slot, encoded_balance)
-```
+All funding transactions are submitted in batch and mined in a single forced block via `evm_mine`.
 
 ### Token Approvals
 
@@ -62,16 +58,7 @@ Default configuration supports:
 - DAI (Dai Stablecoin)
 - USDC (USD Coin)
 - USDT (Tether)
-- WBTC (Wrapped Bitcoin)
-- COW (CoW Protocol Token)
-
-**Storage Slots** (Ethereum Mainnet):
-- WETH: slot 3
-- DAI: slot 2
-- USDC: slot 9
-- USDT: slot 2
-- WBTC: slot 0
-- COW: slot 5
+- GNO (Gnosis Token)
 
 ## Usage
 
@@ -107,15 +94,15 @@ cow-perf run --config configs/scenarios/predefined/enhanced/regression-test.yml 
 ## Implementation
 
 **Source Files:**
-- Main logic: `src/cow_performance/cli/commands/wallet_funding.py`
-- Trader pool: `src/cow_performance/load_generation/trader_pool.py`
-- Configuration: `src/cow_performance/config.py` (WalletConfig)
+- Main logic: `src/cow_performance/cli/wallet_funding.py`
+- Trader pool: `src/cow_performance/load_generation/trader_account.py`
 
 **Key Functions:**
-- `fund_wallet_eth()` - Transfer ETH from Anvil default account
-- `fund_wallet_token()` - Manipulate storage slot for token balance
-- `approve_token_for_trading()` - Approve VaultRelayer
-- `create_trader_pool_from_config()` - Create and fund trader pool
+- `fund_wallet_with_eth()` - Set ETH balance via `anvil_setBalance`
+- `fund_wallet_with_token()` - Fund a single wallet with tokens via impersonation
+- `approve_token()` - Approve VaultRelayer to spend tokens
+- `fund_trader_pool()` - Fund all traders in a pool with ETH, tokens, and approvals in bulk
+- `create_trader_pool_from_config()` - Create a trader pool from wallet configuration
 
 ## Limitations
 
@@ -124,7 +111,7 @@ cow-perf run --config configs/scenarios/predefined/enhanced/regression-test.yml 
 - Testnets (Goerli, Sepolia, etc.)
 - Other local nodes (Ganache, Hardhat Network)
 
-**Why**: Uses Anvil-specific RPC methods (`anvil_setStorageAt`, `anvil_setBalance`)
+**Why**: Uses Anvil-specific RPC methods (`anvil_setBalance`, `anvil_impersonateAccount`, `evm_mine`)
 
 ## Troubleshooting
 
@@ -133,9 +120,9 @@ cow-perf run --config configs/scenarios/predefined/enhanced/regression-test.yml 
 - Check RPC URL: `http://localhost:8545`
 
 **"Token balance not updated"**
-- Verify storage slot for token (may vary by deployment)
+- Check that Anvil is running in fork mode (impersonation requires forked state)
 - Check token address matches mainnet fork
-- Ensure Anvil is in fork mode
+- Ensure the whale/minter account used still holds the expected balance on the forked block
 
 **"Insufficient funds for trading"**
 - Increase `eth_balance` for gas costs

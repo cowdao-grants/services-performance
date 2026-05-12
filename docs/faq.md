@@ -102,18 +102,15 @@ Depends on your use case.
 
 ### Q: Where are test results stored?
 
-**A:** `~/.cow-perf/results/`
+**A:** `.cow-perf/results/`
 
-Latest result: `~/.cow-perf/results/latest-result.json`
+Latest result: `.cow-perf/results/latest-result.json`
 
 ### Q: How do I export results to CSV?
 
 **A:**
 ```bash
-poetry run cow-perf export \
-  --input ~/.cow-perf/results/latest-result.json \
-  --output results.csv \
-  --format csv
+poetry run cow-perf report generate my-baseline --export-csv
 ```
 
 ---
@@ -134,9 +131,8 @@ Templates are in `configs/scenarios/templates/`, scenarios use `template:` field
 
 ```bash
 cow-perf run --config scenario.yml \
-  --num-traders 20 \
-  --duration 300 \
-  --override "base_rate=45.0"
+  --traders 20 \
+  --duration 300
 ```
 
 ### Q: How do I create a custom scenario?
@@ -146,11 +142,11 @@ cow-perf run --config scenario.yml \
 ### Q: What trading pattern should I use?
 
 **A:**
-- **CONSTANT_RATE**: Baseline, predictable load
-- **POISSON**: Most realistic, production estimates
-- **RAMP_UP**: Find capacity limits
-- **SPIKE**: Test burst resilience
-- **RANDOM_INTERVAL**: Natural variance
+- **constant_rate**: Baseline, predictable load
+- **poisson**: Most realistic, production estimates
+- **ramp_up**: Find capacity limits
+- **spike**: Test burst resilience
+- **burst**: Short high-intensity bursts
 
 See [Trading Patterns Guide](trading-patterns.md) for details.
 
@@ -174,7 +170,7 @@ cow-perf run --config scenario.yml --save-baseline "v1.0"
 
 **A:**
 ```bash
-cow-perf compare baseline.json current.json
+cow-perf report generate current --compare previous
 ```
 
 ### Q: What counts as a regression?
@@ -188,15 +184,14 @@ Adjust based on your requirements.
 
 ### Q: Can I use baselines in CI/CD?
 
-**A:** Yes:
+**A:** Yes. Save a baseline and then generate a report to get an exit code:
 
 ```bash
-cow-perf run --config scenario.yml \
-  --compare-baseline baselines/main.json \
-  --fail-on-regression
+cow-perf run --config scenario.yml --save-baseline "current"
+cow-perf report generate current --compare previous
 ```
 
-Exit code 0 = pass, 1 = regression detected.
+Exit code 0 = pass, 2 = FAILURE verdict (success rate <80% or critical latency).
 
 ---
 
@@ -272,7 +267,7 @@ docker volume prune -f  # Remove unused volumes
 
 **A:**
 ```bash
-docker compose --profile monitoring up -d
+docker compose up -d prometheus grafana
 open http://localhost:3000
 ```
 
@@ -324,7 +319,7 @@ See [Troubleshooting Guide](troubleshooting.md) for comprehensive diagnostics.
 
 **A:**
 ```bash
-cow-perf --verbose run --config scenario.yml
+cow-perf run --verbose --config scenario.yml
 ```
 
 ### Q: Where should I report bugs?
@@ -392,7 +387,7 @@ See [Conditional Orders Guide](conditional-orders.md).
 
 ### Q: Can I customize token pairs?
 
-**A:** Yes, but requires code changes. Default pairs in `src/cow_performance/order_generation/`.
+**A:** Yes, but requires code changes. Default pairs in `src/cow_performance/load_generation/`.
 
 ### Q: How do I integrate with CI/CD?
 
@@ -423,7 +418,7 @@ See [Conditional Orders Guide](conditional-orders.md).
 **A:** Yes - important baselines should be version-controlled:
 
 ```bash
-cp ~/.cow-perf/baselines/baseline.json baselines/production/v1.0.json
+cp .cow-perf/baselines/baseline.json baselines/production/v1.0.json
 git add baselines/
 git commit -m "chore: Added production baseline"
 ```

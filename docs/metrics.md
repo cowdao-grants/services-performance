@@ -93,7 +93,7 @@ poetry run pytest tests/unit/test_metrics*.py -v
 
 Tracks: creation, submission, acceptance, fill, completion times.
 
-Status flow: `CREATED → SUBMITTED → ACCEPTED → OPEN → FILLED/EXPIRED/CANCELLED/FAILED`
+Status flow: `CREATED → SUBMITTED → ACCEPTED → OPEN → FILLED/PARTIALLY_FILLED/EXPIRED/CANCELLED/FAILED`
 
 ### API Monitoring
 
@@ -103,7 +103,7 @@ Tracks: endpoint, method, response time, status code, payload sizes, errors.
 
 Samples: CPU %, memory, network I/O, disk I/O.
 
-**Implementation**: `src/cow_performance/metrics/collection.py`
+**Implementation**: `src/cow_performance/monitoring/resource_monitor.py`
 
 ---
 
@@ -125,8 +125,8 @@ time_series = aggregator.aggregate_orders_by_time_window(300)
 # API breakdown
 api_breakdown = aggregator.aggregate_api_metrics_by_endpoint()
 
-# Throughput
-throughput = aggregator.calculate_throughput(start, end, count)
+# Throughput (returns dict with orders_per_second, api_requests_per_second)
+throughput = aggregator.calculate_throughput()
 ```
 
 **Implementation**: `src/cow_performance/metrics/aggregator.py`
@@ -157,13 +157,14 @@ cow-perf run --config scenario.yml --prometheus-port 0
 - `cow_perf_orders_submitted_total` - Counter
 - `cow_perf_orders_filled_total` - Counter
 - `cow_perf_orders_failed_total` - Counter
+- `cow_perf_orders_expired_total` - Counter
 - `cow_perf_orders_active` - Gauge
 
 **Latency Histograms:**
-- `cow_perf_submission_latency` - Submission time
-- `cow_perf_orderbook_latency` - Acceptance time
-- `cow_perf_settlement_latency` - Fill time
-- `cow_perf_order_lifecycle` - Total lifecycle
+- `cow_perf_submission_latency_seconds` - Submission time
+- `cow_perf_orderbook_latency_seconds` - Acceptance time
+- `cow_perf_settlement_latency_seconds` - Fill time
+- `cow_perf_order_lifecycle_seconds` - Total lifecycle
 
 **Throughput:**
 - `cow_perf_orders_per_second` - Gauge
@@ -172,7 +173,7 @@ cow-perf run --config scenario.yml --prometheus-port 0
 
 **API Metrics:**
 - `cow_perf_api_requests_total{endpoint, method, status}` - Counter
-- `cow_perf_api_response_time{endpoint, method}` - Histogram
+- `cow_perf_api_response_time_seconds{endpoint, method}` - Histogram
 - `cow_perf_api_errors_total{endpoint, error_type}` - Counter
 
 **Resource Metrics (per container):**
@@ -181,6 +182,9 @@ cow-perf run --config scenario.yml --prometheus-port 0
 - `cow_perf_container_memory_percent{container}` - Gauge
 - `cow_perf_container_network_rx_bytes{container}` - Gauge
 - `cow_perf_container_network_tx_bytes{container}` - Gauge
+- `cow_perf_container_disk_read_bytes{container}` - Gauge
+- `cow_perf_container_disk_write_bytes{container}` - Gauge
+- `cow_perf_container_disk_usage_bytes{container}` - Gauge
 
 **Trader Metrics:**
 - `cow_perf_trader_orders_submitted{trader_index}` - Counter
@@ -195,7 +199,7 @@ cow-perf run --config scenario.yml --prometheus-port 0
 **Acceptance Latency (new):**
 - `cow_perf_order_acceptance_latency_seconds{scenario}` - Histogram
   - Measures total time from **order creation** to **orderbook acceptance** (creation → acceptance).
-  - Complements the existing `orderbook_latency` (submission → acceptance) by including the
+  - Complements the existing `cow_perf_orderbook_latency_seconds` (submission → acceptance) by including the
     time the order spends in the local queue before submission.
   - Buckets: 1, 5, 10, 30, 60, 120, 300, 600 seconds.
   - Useful query: `histogram_quantile(0.99, rate(cow_perf_order_acceptance_latency_seconds_bucket[5m]))`
@@ -206,6 +210,9 @@ cow-perf run --config scenario.yml --prometheus-port 0
 - `cow_perf_scaling_complexity_slope{scenario, metric}` - Gauge
   - Power-law slope k from log-log regression (y ~ x^k) for each analysed metric.
   - Interpretation: k ≈ 1 → O(n) linear; k ≈ 2 → O(n²) quadratic; k < 1 → sub-linear.
+- `cow_perf_container_rss_snapshot_bytes{scenario, container, snapshot}` - Gauge
+  - Container RSS memory sampled before/after each scaling step.
+  - The `snapshot` label identifies the measurement point (e.g., `before`, `after`).
 
 ### Memory Metrics (scaling experiment)
 
@@ -239,7 +246,7 @@ cow-perf run --config scenario.yml
 
 ### Report Structure
 
-Test reports (`~/.cow-perf/results/`) contain:
+Test reports (`.cow-perf/results/`) contain:
 
 ```json
 {
@@ -353,31 +360,26 @@ avg_response_time = sum(all_durations) / num_requests
 Live metrics updates during test execution:
 
 ```python
-from cow_performance.metrics import MetricsEventStream, MetricsEvent
+from cow_performance.metrics.streaming import MetricsEventStream
+from cow_performance.metrics.store import MetricsStore
 
-# Create stream
-stream = MetricsEventStream()
+store = MetricsStore()
+stream = MetricsEventStream(store)
 
-# Subscribe to events
-async def handle_metric(event: MetricsEvent):
-    if event.type == "order_filled":
-        print(f"Order filled: {event.data['order_uid']}")
-    elif event.type == "latency_spike":
-        print(f"High latency detected: {event.data['latency_ms']}ms")
-
-stream.subscribe(handle_metric)
+# Use as async context manager and async iterator
+async with stream:
+    async for event in stream:
+        if event.event_type == "order":
+            print(f"Order update: {event.data}")
+        elif event.event_type == "api":
+            print(f"API metric: {event.data}")
 ```
 
 ### Event Types
 
-- `order_created` - New order generated
-- `order_submitted` - Submitted to API
-- `order_accepted` - Accepted by orderbook
-- `order_filled` - Fill detected
-- `order_failed` - Order failed
-- `latency_spike` - Latency exceeds threshold
-- `api_error` - API request error
-- `resource_alert` - Resource usage high
+- `order` - Order lifecycle update (creation, submission, fill, failure, etc.)
+- `api` - API request/response metric recorded
+- `resource` - Container resource sample recorded
 
 ### CLI Live Display
 
@@ -424,18 +426,19 @@ Approximate memory per item:
 
 **100k orders = ~50 MB**
 
-### Callbacks on Eviction
+### Callbacks on Metrics Updates
 
-Register callbacks to save evicted data:
+Register callbacks to receive metrics updates in real time:
 
 ```python
-def on_order_evicted(order: OrderMetadata):
-    save_to_database(order)
+def on_metric_update(metric_type: str, metric: object) -> None:
+    if metric_type == "order":
+        save_to_database(metric)
 
-store.register_eviction_callback("order", on_order_evicted)
+store.register_callback(on_metric_update)
 ```
 
-**Implementation**: `src/cow_performance/metrics/store.py:150-200`
+**Implementation**: `src/cow_performance/metrics/store.py`
 
 ---
 

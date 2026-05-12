@@ -12,8 +12,8 @@ The CoW Performance Testing Suite supports multiple order submission patterns to
 
 All patterns are implemented in `TraderSimulator`:
 - Source: `src/cow_performance/load_generation/trader_simulator.py`
-- Pattern enum: lines 22-33
-- Pattern logic: lines 554-712
+- Pattern enum: `TradingPattern` (StrEnum) — top of file
+- Pattern logic: `_constant_rate_loop`, `_random_interval_loop`, `_burst_pattern_loop`, `_time_based_loop`, `_ramp_up_loop`, `_ramp_down_loop`, `_spike_loop`, `_poisson_loop`
 
 ## Available Patterns
 
@@ -101,12 +101,9 @@ max_interval: 45.0  # Average ~27.5s = ~2.2 orders/min per trader
 
 market_order_ratio: 0.6
 limit_order_ratio: 0.4
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 ```
 
-**Implementation:** `trader_simulator.py:202-203, 563-566`
+**Implementation:** `trader_simulator.py`: `_random_interval_loop`
 
 ---
 
@@ -165,9 +162,6 @@ active_multiplier: 4.0       # 80 orders/min during US market hours
 
 market_order_ratio: 0.7
 limit_order_ratio: 0.3
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 ```
 
 **Important Notes:**
@@ -175,7 +169,7 @@ good_after_time_order_ratio: 0.0
 - For 24-hour tests, consider multiple active hour ranges
 - Active hours use 24-hour format (0-23)
 
-**Implementation:** `trader_simulator.py:209-213, 584-587`
+**Implementation:** `trader_simulator.py`: `_time_based_loop`
 
 ---
 
@@ -239,9 +233,6 @@ quiet_period: 20.0     # 20 seconds between bursts
 # Use simple orders for burst testing
 market_order_ratio: 1.0
 limit_order_ratio: 0.0
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 
 success_criteria:
   min_success_rate: 0.80  # Allow some failures during bursts
@@ -260,7 +251,7 @@ Average rate: 15 / 23 ≈ 0.65 orders/second
 Peak rate: 1 / 0.2 = 5 orders/second (during burst only)
 ```
 
-**Implementation:** `trader_simulator.py:205-207, 568-582`
+**Implementation:** `trader_simulator.py`: `_burst_pattern_loop`
 
 ---
 

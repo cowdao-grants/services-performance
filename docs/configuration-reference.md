@@ -31,11 +31,8 @@ trading_pattern: "constant_rate"
 base_rate: 60.0
 
 # Order ratios (must sum to 1.0)
-market_order_ratio: 0.6
-limit_order_ratio: 0.4
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
+market_order_ratio: 0.5
+limit_order_ratio: 0.5
 ```
 
 ---
@@ -63,39 +60,27 @@ good_after_time_order_ratio: 0.0
 
 ## Order Type Distribution
 
-All five ratios must sum to **exactly 1.0** (±0.001 tolerance). Each ratio is the probability a generated order will be of that type.
+Both ratios must sum to **exactly 1.0** (±0.001 tolerance). Each ratio is the probability a generated order will be of that type.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `market_order_ratio` | Float | `0.4` | Market orders — simplest type, immediate execution, highest throughput |
-| `limit_order_ratio` | Float | `0.4` | Limit orders — price-specific execution, moderate complexity |
-| `twap_order_ratio` | Float | `0.1` | TWAP orders — conditional, scheduled execution, higher complexity |
-| `stop_loss_order_ratio` | Float | `0.05` | Stop-loss orders — conditional, trigger-based execution, higher complexity |
-| `good_after_time_order_ratio` | Float | `0.05` | Good-after-time orders — conditional, time-delayed execution, higher complexity |
+| `market_order_ratio` | Float | `0.5` | Market orders — simplest type, immediate execution, highest throughput |
+| `limit_order_ratio` | Float | `0.5` | Limit orders — price-specific execution, moderate complexity |
 
 **Common distributions:**
 
 ```yaml
 # Balanced (default)
-market_order_ratio: 0.4
-limit_order_ratio: 0.4
-twap_order_ratio: 0.1
-stop_loss_order_ratio: 0.05
-good_after_time_order_ratio: 0.05
+market_order_ratio: 0.5
+limit_order_ratio: 0.5
 
-# High-throughput (simple orders only)
+# Market-heavy
 market_order_ratio: 0.7
 limit_order_ratio: 0.3
-twap_order_ratio: 0.0
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
 
-# Conditional-heavy
-market_order_ratio: 0.2
-limit_order_ratio: 0.2
-twap_order_ratio: 0.3
-stop_loss_order_ratio: 0.2
-good_after_time_order_ratio: 0.1
+# Limit-heavy
+market_order_ratio: 0.3
+limit_order_ratio: 0.7
 ```
 
 ---
@@ -112,12 +97,12 @@ The `trading_pattern` field (default: `"constant_rate"`) controls order submissi
 |---------|----------------|----------|
 | `constant_rate` | `base_rate` | Steady, predictable rate - baseline and sustained load tests |
 | `random_interval` | `min_interval`, `max_interval` | Random intervals - realistic user behavior |
-| `burst` | `base_rate`, `burst_size`, `burst_interval`, `quiet_period` | Rapid bursts with quiet periods - spike testing |
-| `time_based` | `base_rate`, `active_hours` | Time-based activity - business hours simulation |
-| `ramp_up` | `start_rate`, `end_rate`, `ramp_duration` | Gradually increasing rate - load ramp scenarios |
-| `ramp_down` | `start_rate`, `end_rate`, `ramp_duration` | Gradually decreasing rate - load reduction scenarios |
-| `spike` | `base_rate`, `spike_rate`, `spike_duration`, `recovery_time` | Sudden bursts with recovery - resilience testing |
-| `poisson` | `lambda_rate` | Poisson distribution - realistic random intervals |
+| `burst` | `burst_size`, `burst_interval`, `quiet_period` | Rapid bursts with quiet periods - spike testing |
+| `time_based` | `base_rate` | Time-based activity - business hours simulation |
+| `ramp_up` | `ramp_start_rate`, `ramp_target_rate`, `ramp_duration` | Gradually increasing rate - load ramp scenarios |
+| `ramp_down` | `ramp_start_rate`, `ramp_target_rate`, `ramp_duration` | Gradually decreasing rate - load reduction scenarios |
+| `spike` | `spike_normal_rate`, `spike_burst_rate`, `spike_duration`, `spike_recovery_time` | Sudden bursts with recovery - resilience testing |
+| `poisson` | `poisson_lambda` | Poisson distribution - realistic random intervals |
 
 ### Field Reference
 
@@ -138,7 +123,6 @@ The `trading_pattern` field (default: `"constant_rate"`) controls order submissi
 
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
-| `base_rate` | Float | > 0.0 | Baseline rate between bursts |
 | `burst_size` | Integer | ≥ 1 | Orders per burst |
 | `burst_interval` | Float (s) | > 0.0 | Time between orders within burst |
 | `quiet_period` | Float (s) | > 0.0 | Rest period between bursts |
@@ -147,24 +131,25 @@ The `trading_pattern` field (default: `"constant_rate"`) controls order submissi
 
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
-| `start_rate` | Float | > 0.0 | Starting orders per minute |
-| `end_rate` | Float | > 0.0 | Ending orders per minute |
-| `ramp_duration` | Integer (s) | > 0 | Duration of ramp period |
+| `ramp_start_rate` | Float | > 0.0 | Starting orders per minute |
+| `ramp_target_rate` | Float | > 0.0 | Ending orders per minute |
+| `ramp_duration` | Float (s) | > 0.0 | Duration of ramp period |
+| `ramp_curve` | String | `"linear"` or `"exponential"` | Shape of the ramp curve (default: `"linear"`) |
 
 **`spike` fields:**
 
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
-| `base_rate` | Float | > 0.0 | Normal rate outside spike |
-| `spike_rate` | Float | > `base_rate` | Orders per minute during spike |
-| `spike_duration` | Integer (s) | > 0 | Duration of each spike |
-| `recovery_time` | Integer (s) | > 0 | Time between spikes |
+| `spike_normal_rate` | Float | > 0.0 | Normal rate outside spike (orders per minute) |
+| `spike_burst_rate` | Float | > `spike_normal_rate` | Orders per minute during spike |
+| `spike_duration` | Float (s) | > 0.0 | Duration of each spike |
+| `spike_recovery_time` | Float (s) | > 0.0 | Time between spikes |
 
 **`poisson` fields:**
 
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
-| `lambda_rate` | Float | > 0.0 | Average orders per minute (λ parameter) |
+| `poisson_lambda` | Float | > 0.0 | Average orders per minute (λ parameter) |
 
 ---
 
@@ -261,15 +246,14 @@ max_interval: 30.0  # Max 30s between orders
 ```yaml
 trading_pattern: "time_based"
 base_rate: 30.0
-active_hours: [9, 10, 11, 12, 13, 14, 15, 16]  # 9 AM - 4 PM
-active_multiplier: 2.0  # 2x rate during active hours
 ```
+
+> **Note:** `active_hours` and `active_multiplier` are not scenario YAML fields. Configure them in your global `.cow-perf.yml` config file under the trader settings.
 
 ### BURST
 
 ```yaml
 trading_pattern: "burst"
-base_rate: 60.0  # Placeholder
 burst_size: 10
 burst_interval: 0.5  # 0.5s between orders in burst
 quiet_period: 30.0   # 30s rest between bursts
@@ -279,19 +263,19 @@ quiet_period: 30.0   # 30s rest between bursts
 
 ```yaml
 trading_pattern: "ramp_up"
-ramp_start_rate: 6.0
-ramp_target_rate: 60.0
-ramp_duration: 300.0
-ramp_curve: "linear"  # or "exponential"
+ramp_start_rate: 6.0    # Starting orders per minute
+ramp_target_rate: 60.0  # Ending orders per minute
+ramp_duration: 300.0    # Duration of ramp in seconds
+ramp_curve: "linear"    # "linear" or "exponential"
 ```
 
 ### RAMP_DOWN
 
 ```yaml
 trading_pattern: "ramp_down"
-ramp_start_rate: 60.0
-ramp_target_rate: 6.0
-ramp_duration: 300.0
+ramp_start_rate: 60.0   # Starting orders per minute
+ramp_target_rate: 6.0   # Ending orders per minute
+ramp_duration: 300.0    # Duration of ramp in seconds
 ramp_curve: "exponential"
 ```
 
@@ -299,17 +283,17 @@ ramp_curve: "exponential"
 
 ```yaml
 trading_pattern: "spike"
-spike_normal_rate: 10.0
-spike_burst_rate: 100.0
-spike_duration: 15.0
-spike_recovery_time: 60.0
+spike_normal_rate: 10.0    # Normal orders per minute
+spike_burst_rate: 100.0    # Burst orders per minute (must exceed spike_normal_rate)
+spike_duration: 15.0       # Duration of each spike in seconds
+spike_recovery_time: 60.0  # Time between spikes in seconds
 ```
 
 ### POISSON
 
 ```yaml
 trading_pattern: "poisson"
-poisson_lambda: 30.0  # Average 30 orders/min
+poisson_lambda: 30.0  # Average 30 orders/min (λ parameter)
 ```
 
 ### Success Criteria by Scenario Type
@@ -374,10 +358,7 @@ duration: 120
 startup_interval: 0.1
 
 market_order_ratio: 0.5
-limit_order_ratio: 0.4
-twap_order_ratio: 0.1
-stop_loss_order_ratio: 0.0
-good_after_time_order_ratio: 0.0
+limit_order_ratio: 0.5
 
 trading_pattern: "constant_rate"
 base_rate: 60.0  # 1 order/sec per trader = 10 orders/sec total
@@ -389,17 +370,20 @@ base_rate: 60.0  # 1 order/sec per trader = 10 orders/sec total
 
 ```bash
 cow-perf scenarios --validate my-scenario.yml
-cow-perf scenarios --validate my-scenario.yml --verbose
 ```
 
 **Common errors:**
 
 | Error | Cause |
 |-------|-------|
-| `Order ratios sum to 0.9, must equal 1.0` | Five order ratios don't sum to 1.0 |
-| `Trading pattern must be one of: constant_rate, burst, random_interval` | Invalid `trading_pattern` value |
-| `burst pattern requires burst_size, burst_interval, quiet_period` | Missing fields for selected pattern |
-| `min_success_rate must be between 0.0 and 1.0` | Success criteria value out of range |
+| `Order type ratios must sum to 1.0, got 0.9. Current ratios: market=..., limit=...` | `market_order_ratio` and `limit_order_ratio` don't sum to 1.0 |
+| `Trading pattern must be one of: constant_rate, burst, random_interval, time_based, ramp_up, ramp_down, spike, poisson, got: <value>` | Invalid `trading_pattern` value |
+| `burst_size is required for burst pattern` | Missing `burst_size` for burst pattern |
+| `burst_interval is required for burst pattern` | Missing `burst_interval` for burst pattern |
+| `quiet_period is required for burst pattern` | Missing `quiet_period` for burst pattern |
+| `min_interval is required for random_interval pattern` | Missing `min_interval` for random_interval pattern |
+| `max_interval is required for random_interval pattern` | Missing `max_interval` for random_interval pattern |
+| `min_success_rate must be between 0 and 1` | Success criteria value out of range (caught by Pydantic) |
 
 ---
 

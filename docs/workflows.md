@@ -21,11 +21,11 @@ docker compose ps  # All should show "healthy"
 # 3. Run test
 poetry run cow-perf run \
   --config configs/scenarios/predefined/smoke-test.yml \
-  --num-traders 3 \
+  --traders 3 \
   --duration 120
 
 # 4. View results
-cat ~/.cow-perf/results/latest-result.json | jq .
+cat .cow-perf/results/perf-test-*.json | jq .
 ```
 
 **Next steps:** Try predefined scenarios, create custom scenarios, set up baselines.
@@ -66,15 +66,14 @@ jobs:
         run: |
           poetry run cow-perf run \
             --config configs/scenarios/ci/regression-test.yml \
-            --compare-baseline baselines/main.json \
-            --fail-on-regression
+            --save-baseline "ci-run-$(git rev-parse --short HEAD)"
 
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: performance-results
-          path: ~/.cow-perf/results/
+          path: .cow-perf/results/
 ```
 
 ### CI Scenario
@@ -105,7 +104,10 @@ poetry run cow-perf run \
   --config configs/scenarios/ci/regression-test.yml \
   --save-baseline "main-$(git rev-parse --short HEAD)"
 
-cp ~/.cow-perf/baselines/main-*.json baselines/main.json
+# Baselines are stored by UUID; find the path with:
+# cow-perf baselines --show "main-$(git rev-parse --short HEAD)"
+# Then copy the UUID file:
+# cp .cow-perf/baselines/{uuid}.json baselines/main.json
 git add baselines/main.json
 git commit -m "chore: Updated CI baseline"
 ```
@@ -141,7 +143,7 @@ poetry run cow-perf run \
   --config configs/scenarios/predefined/sustained-load.yml \
   --duration 600
 
-jq '.avg_order_latency_ms' ~/.cow-perf/results/latest-result.json
+jq '.performance.avg_order_latency_ms' .cow-perf/results/perf-test-*.json
 ```
 
 ### Collect Metrics
@@ -186,13 +188,13 @@ LIMIT 10;
 
 ```bash
 # Reduce load
-poetry run cow-perf run --config scenario.yml --num-traders 5
+poetry run cow-perf run --config scenario.yml --traders 5
 
-# Market orders only
-poetry run cow-perf run --config scenario.yml --override "market_order_ratio=1.0"
+# Market orders only (set market_order_ratio=1.0 in your scenario config)
+poetry run cow-perf run --config scenario.yml
 
-# Lower rate
-poetry run cow-perf run --config scenario.yml --override "base_rate=10.0"
+# Lower rate (set base_rate=10.0 in your scenario config)
+poetry run cow-perf run --config scenario.yml
 ```
 
 ### Document Findings
@@ -236,8 +238,7 @@ poetry run cow-perf run \
 # 2. Regression test
 poetry run cow-perf run \
   --config configs/scenarios/release/regression.yml \
-  --compare-baseline baselines/production.json \
-  --fail-on-regression
+  --save-baseline "regression-$(git rev-parse --short HEAD)"
 
 # 3. Load test
 poetry run cow-perf run \
@@ -278,21 +279,23 @@ success_criteria:
 ### Validate Results
 
 ```bash
-# Check all passed
-for result in ~/.cow-perf/results/2026-03-23*.json; do
-  echo "$(basename $result): $(jq -r '.verdict' "$result")"
+# Check orders_per_second from raw results
+for result in .cow-perf/results/perf-test-*.json; do
+  echo "$(basename $result): $(jq -r '.performance.orders_per_second' "$result")"
 done
 
 # Compare with previous release
-poetry run cow-perf compare \
-  baselines/release-v1.0.0.json \
-  baselines/release-v1.1.0.json
+poetry run cow-perf report generate release-v1.1.0 \
+  --compare release-v1.0.0
 ```
 
 ### Update Baseline
 
 ```bash
-cp ~/.cow-perf/baselines/release-v1.1.0.json baselines/production.json
+# Baselines are stored by UUID; find the file with:
+# cow-perf baselines --show "release-v1.1.0"
+# Then copy the UUID file:
+# cp .cow-perf/baselines/{uuid}.json baselines/production.json
 git add baselines/production.json
 git commit -m "chore: Updated baseline for v1.1.0"
 ```
@@ -389,7 +392,10 @@ poetry run cow-perf run \
 
 # Organize
 mkdir -p baselines/{production,staging}
-cp ~/.cow-perf/baselines/baseline-*.json baselines/production/v1.0.0.json
+# Baselines are stored by UUID; find the file with:
+# cow-perf baselines --show "baseline-name"
+# Then copy the UUID file:
+# cp .cow-perf/baselines/{uuid}.json baselines/production/v1.0.0.json
 
 # Commit
 git add baselines/
@@ -399,11 +405,10 @@ git commit -m "chore: Added production baseline"
 ### Compare Baselines
 
 ```bash
-poetry run cow-perf compare \
-  baselines/production/v1.0.0.json \
-  baselines/production/v1.1.0.json
+poetry run cow-perf report generate v1.1.0 \
+  --compare v1.0.0
 
-cat ~/.cow-perf/reports/comparison-*.json | jq .
+cat .cow-perf/reports/comparison-*.json | jq .
 ```
 
 ### Track Over Time
@@ -427,12 +432,14 @@ done
 ### Regression Detection
 
 ```bash
+# Save the current run as a baseline, then compare with report generate
 poetry run cow-perf run \
   --config scenario.yml \
-  --compare-baseline baselines/production.json \
-  --fail-on-regression
+  --save-baseline "current-run"
 
-# Exit code 0 = pass, 1 = regression
+# Compare against previous baseline; exit code 2 = FAILURE verdict
+poetry run cow-perf report generate current-run \
+  --compare baselines/production
 ```
 
 ### Cleanup
@@ -440,7 +447,7 @@ poetry run cow-perf run \
 ```bash
 # Archive old baselines (90+ days)
 mkdir -p baselines/archive/
-find ~/.cow-perf/baselines/ -mtime +90 -exec mv {} baselines/archive/ \;
+find .cow-perf/baselines/ -mtime +90 -exec mv {} baselines/archive/ \;
 ```
 
 ---
@@ -466,7 +473,7 @@ poetry install && docker compose up -d
 poetry run cow-perf run --config configs/scenarios/predefined/smoke-test.yml
 
 # CI/CD
-poetry run cow-perf run --config scenario.yml --compare-baseline baseline.json --fail-on-regression
+poetry run cow-perf run --config scenario.yml --save-baseline "ci-run"
 
 # Investigation
 docker stats
@@ -475,7 +482,7 @@ poetry run cow-perf run --config test.yml --save-baseline "investigation"
 
 # Release
 poetry run cow-perf run --config acceptance.yml --save-baseline "release-v1.0"
-poetry run cow-perf compare v1.0.json v1.1.json
+poetry run cow-perf report generate release-v1.1 --compare release-v1.0
 
 # Custom
 poetry run cow-perf scenarios --validate scenario.yml

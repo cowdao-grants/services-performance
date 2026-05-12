@@ -10,7 +10,6 @@
 from cow_performance.load_generation import (
     TraderPool,
     SafeWallet,
-    submit_conditional_order,
     OrderSigner,
 )
 from web3 import Web3
@@ -157,84 +156,22 @@ signer = OrderSigner(
 signed_order = signer.sign_order(order_params, trader.get_account())
 ```
 
-### ConditionalOrderSigner
+### EIP-1271 Signatures for Safe Wallets
 
-EIP-1271 signatures for Safe wallets:
+Safe wallets sign messages using the `sign_message` method, which produces an EIP-1271-compatible signature:
 
 ```python
-from cow_performance.load_generation import ConditionalOrderSigner
-
-signer = ConditionalOrderSigner(
-    safe_wallet=safe_wallet,
-    composable_cow_address="0xfdaFc9d1902f4e0b84f65F49f244b32b31013b74"
-)
-
-# Create EIP-1271 signature for conditional order
-signature = signer.create_signature(order_params)
+# Sign a message hash with the Safe wallet (EIP-1271)
+signature = safe_wallet.sign_message(message_hash)
 ```
 
 ---
 
 ## ComposableCow Submission
 
-Submit conditional orders (TWAP, Stop-Loss) to the blockchain:
+Conditional orders (TWAP, Stop-Loss) are submitted to the ComposableCow contract by calling it through the Safe wallet's `exec_transaction` method. The Safe wallet executes the `create` function on the ComposableCow contract, encoding the conditional order parameters as call data.
 
-```python
-from cow_performance.load_generation import (
-    submit_conditional_order,
-    get_tradeable_order,
-    remove_conditional_order,
-    ConditionalOrderFactory,
-)
-
-# Create conditional order
-factory = ConditionalOrderFactory(
-    token_pair_registry=token_registry,
-    chain_id=1,
-    safe_wallet_address=safe_wallet.address,
-)
-
-twap_order = factory.create_twap_order(
-    total_amount=1000.0,
-    num_parts=5,
-    interval_seconds=300,
-)
-
-# Submit to ComposableCow contract
-tx_hash = submit_conditional_order(
-    web3=web3,
-    composable_cow_address="0xfdaFc9d1902f4e0b84f65F49f244b32b31013b74",
-    safe_wallet=safe_wallet,
-    conditional_order=twap_order,
-    dispatch=True,  # Immediately dispatch to watchtower
-)
-
-print(f"Conditional order submitted: {tx_hash.hex()}")
-
-# Check if order is tradeable
-tradeable = get_tradeable_order(
-    web3=web3,
-    composable_cow_address="0xfdaFc9d1902f4e0b84f65F49f244b32b31013b74",
-    owner=safe_wallet.address,
-    conditional_order_params={
-        "handler": twap_order.params.handler,
-        "salt": twap_order.params.salt,
-        "staticInput": twap_order.params.staticInput,
-    },
-)
-
-if tradeable:
-    order, signature = tradeable
-    print("Order is tradeable!")
-
-# Remove conditional order
-remove_conditional_order(
-    web3=web3,
-    composable_cow_address="0xfdaFc9d1902f4e0b84f65F49f244b32b31013b74",
-    safe_wallet=safe_wallet,
-    conditional_order_params={...},
-)
-```
+See [Conditional Orders](conditional-orders.md) for full details on creating and submitting TWAP and Stop-Loss orders.
 
 ---
 
@@ -323,43 +260,47 @@ from cow_performance.load_generation import (
     OrchestrationConfig,
     TraderBehaviorConfig,
     TradingPattern,
+    OrderSigner,
+    OrderTracker,
 )
 
 # Configure trader behavior
 behavior_config = TraderBehaviorConfig(
-    think_time_range=(1.0, 5.0),           # Think time between actions (seconds)
-    orders_per_session_range=(5, 20),      # Orders per trading session
-    trading_pattern=TradingPattern.BURST,   # CONSTANT, BURST, or RAMP_UP
+    min_think_time=1.0,                    # Minimum think time before each order (seconds)
+    max_think_time=5.0,                    # Maximum think time before each order (seconds)
+    pattern=TradingPattern.BURST,          # Trading pattern (e.g., BURST, CONSTANT_RATE, RAMP_UP)
 )
 
 # Create simulator for a trader
 simulator = TraderSimulator(
-    trader_account=trader,
+    trader=trader,
     order_factory=order_factory,
+    order_signer=order_signer,
+    order_tracker=order_tracker,
     behavior_config=behavior_config,
 )
 
 # Run simulation
-await simulator.simulate_trading_session()
+await simulator.run(duration=600)
 
 # Orchestrate multiple traders
 orchestration_config = OrchestrationConfig(
     num_traders=10,
-    orders_per_trader=100,
-    duration_seconds=600,
-    ramp_up_seconds=60,
+    duration=600,
+    startup_interval=0.5,
 )
 
 orchestrator = TraderOrchestrator(
     trader_pool=trader_pool,
     order_factory=order_factory,
-    config=orchestration_config,
+    order_signer=order_signer,
+    order_tracker=order_tracker,
+    default_behavior_config=behavior_config,
+    orchestration_config=orchestration_config,
 )
 
 # Run load test
-metrics = await orchestrator.run_load_test()
-print(f"Total orders submitted: {metrics.total_orders}")
-print(f"Orders per second: {metrics.orders_per_second}")
+await orchestrator.run()
 ```
 
 ---
@@ -374,18 +315,19 @@ from cow_performance.load_generation import OrderTracker, OrderStatus
 tracker = OrderTracker()
 
 # Track order submission
-tracker.track_submission(order_uid, order_data)
+tracker.track_order(order_uid, owner=trader.address, order_type="market")
 
 # Update order status
-tracker.update_status(order_uid, OrderStatus.FULFILLED)
+tracker.update_order_status(order_uid, OrderStatus.FILLED)
 
 # Get metrics
 metrics = tracker.get_metrics()
-print(f"Success rate: {metrics.success_rate * 100}%")
-print(f"Average latency: {metrics.average_latency}s")
+print(f"Total orders: {metrics.total_orders}")
+print(f"Orders filled: {metrics.orders_filled}")
+print(f"Average time to fill: {metrics.avg_time_to_fill}s")
 
-# Get order history
-history = tracker.get_order_history(order_uid)
+# Get order metadata
+metadata = tracker.get_order(order_uid)
 ```
 
 ---
@@ -405,12 +347,11 @@ User Simulation Module
 │
 ├── Order Creation
 │   ├── OrderFactory (Regular orders)
-│   ├── ConditionalOrderFactory (TWAP, Stop-Loss)
 │   └── Hooks metadata generation
 │
 ├── Order Signing
 │   ├── OrderSigner (EIP-712 for EOAs)
-│   └── ConditionalOrderSigner (EIP-1271 for Safe)
+│   └── SafeWallet.sign_message (EIP-1271 for Safe)
 │
 ├── Order Submission
 │   ├── Orderbook API submission (regular orders)

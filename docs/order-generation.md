@@ -7,6 +7,8 @@
 ## Quick Start
 
 ```python
+from decimal import Decimal
+
 from eth_account import Account
 from cow_performance.load_generation import (
     OrderFactory,
@@ -23,9 +25,9 @@ factory = OrderFactory(
 
 # Create trader and generate orders
 trader = Account.create()
-market_order = factory.create_market_order(trader)
-limit_order = factory.create_limit_order(trader, limit_price=0.99)
-batch_orders = factory.create_batch_orders(trader, count=100)
+market_order = await factory.create_market_order(trader)
+limit_order = await factory.create_limit_order(trader, limit_price=Decimal("0.99"))
+batch_orders = await factory.create_batch_orders(trader, count=100)
 ```
 
 ---
@@ -75,7 +77,7 @@ Pre-configured templates for common scenarios:
 from cow_performance.load_generation import create_default_templates
 
 template_registry = create_default_templates()
-order = template_registry.create_order_from_template(
+order = await template_registry.create_order_from_template(
     template_name="small_market",
     factory=factory,
     trader_account=trader,

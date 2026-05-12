@@ -31,7 +31,7 @@ docker stats --no-stream
 
 # Check Docker volumes
 docker volume ls
-docker volume inspect cow-performance_postgres-data
+docker volume inspect services-performance_postgres-data
 ```
 
 **Interpreting `docker system df` output:**
@@ -99,7 +99,7 @@ Remove specific components:
 docker compose rm -f orderbook
 
 # Remove specific volume
-docker volume rm cow-performance_postgres-data
+docker volume rm services-performance_postgres-data
 
 # Remove unused volumes only
 docker volume prune -f
@@ -232,7 +232,7 @@ docker compose up -d
 3. **Stop unused containers:**
    ```bash
    # Stop monitoring stack if not needed
-   docker compose --profile monitoring down
+   docker compose stop prometheus grafana
    ```
 
 ### Network Issues
@@ -245,10 +245,10 @@ docker compose up -d
 **Diagnosis:**
 ```bash
 # Check network exists
-docker network ls | grep cownet
+docker network ls | grep cow-perf-test
 
 # Inspect network
-docker network inspect cow-performance_cownet
+docker network inspect cow-perf-test
 
 # Test service connectivity (from inside container)
 docker exec $(docker ps -qf "name=orderbook") curl http://autopilot:8080/health
@@ -451,7 +451,7 @@ Example with Grafana alerting:
 
 1. Enable monitoring stack:
    ```bash
-   docker compose --profile monitoring up -d
+   docker compose up -d prometheus grafana
    ```
 
 2. Access Grafana: http://localhost:3000

@@ -40,7 +40,7 @@ Each baseline captures:
 
 ### Baseline Storage
 
-Baselines are stored in `~/.cow-perf/baselines/` as JSON files with UUID identifiers. You reference them by name (e.g., "v1.0") and the system maintains an index mapping names to UUIDs.
+Baselines are stored in `.cow-perf/baselines/` (project-local directory) as JSON files with UUID identifiers. You reference them by name (e.g., "v1.0") and the system maintains an index mapping names to UUIDs.
 
 > **Command Reference**: See [Reports Guide - Managing Baselines](reports.md#managing-baselines) for list/show/delete commands.
 
@@ -58,29 +58,30 @@ For each metric, the system calculates:
    - Example: P95 latency went from 10s → 13s = +30% change
 
 2. **Statistical Significance**: Whether the change is meaningful
-   - Uses t-test with p-value < 0.05 threshold
+   - Uses **Welch's t-test** (robust to unequal variances), p-value < 0.05 threshold
+   - Falls back to Cohen's d ≥ 0.5 when sample sizes are too small for a t-test
    - Prevents false positives from random variance
 
 3. **Effect Size**: Magnitude of the change
-   - Cohen's d: small (0.2), medium (0.5), large (0.8)
+   - Cohen's d: negligible (<0.2), small (0.2–0.5), medium (0.5–0.8), large (≥0.8)
    - Helps distinguish practical vs statistical significance
 
 ### Regression Severity Levels
 
 Changes are categorized by severity:
 
-| Severity | Latency Increase | Throughput Decrease | Error Rate Increase |
-|----------|------------------|---------------------|---------------------|
-| **CRITICAL** | >30% | >50% | >5 percentage points |
-| **MAJOR** | >15% | >25% | >2 percentage points |
-| **MINOR** | >10% | >10% | >1 percentage point |
+| Severity | Latency Increase | Throughput Decrease | Error Rate Increase | Resource Increase |
+|----------|------------------|---------------------|---------------------|-------------------|
+| **CRITICAL** | ≥30% | ≥50% | ≥5 percentage points | ≥50% |
+| **MAJOR** | ≥15% | ≥25% | ≥2 percentage points | ≥20% |
+| **MINOR** | ≥10% | ≥10% | ≥1 percentage point | ≥10% |
 
 ### Comparison Verdicts
 
 The overall comparison verdict:
 
-- **Regression**: Critical issues detected or multiple major issues
-- **Improvement**: Net positive change in metrics
+- **Regression**: Any of the following: at least 1 critical issue; at least 1 major issue; 3+ minor issues; or more regressions than improvements overall
+- **Improvement**: More improvements than regressions and no major/critical issues
 - **Neutral**: No significant changes
 
 > **Command Reference**: See [Reports Guide - Baseline Comparison](reports.md#baseline-comparison) for detailed examples.
@@ -105,8 +106,8 @@ Every report includes an executive summary with:
 | Verdict | Criteria |
 |---------|----------|
 | **SUCCESS** | Success rate ≥95%, latency within expectations |
-| **WARNING** | Success rate 80-95% or elevated latency |
-| **FAILURE** | Success rate <80% or critical latency issues |
+| **WARNING** | Success rate 80–95%, very high latency (P95 fill >10 s), or API success rate <99% |
+| **FAILURE** | Success rate <80% |
 
 ### Report Sections
 
@@ -131,12 +132,12 @@ Reports include automated recommendations based on metric analysis:
 
 ### Report Formats
 
-| Format | Use Case | Features |
-|--------|----------|----------|
-| **Text** | Terminal display, quick review | Colored output, tables |
-| **Markdown** | GitHub PRs, documentation | Formatted tables, emoji indicators |
-| **JSON** | Automation, data pipelines | Machine-readable, full metrics |
-| **CSV** | Spreadsheets, detailed analysis | Multiple files (orders, API, resources) |
+| Format | Flag | Use Case | Features |
+|--------|------|----------|----------|
+| **Text** | `--format text` | Terminal display, quick review | Colored output, tables |
+| **Markdown** | `--format markdown` | GitHub PRs, documentation | Formatted tables, emoji indicators |
+| **JSON** | `--format json` | Automation, data pipelines | Machine-readable, full metrics |
+| **CSV** | `--export-csv` | Spreadsheets, detailed analysis | Multiple files (orders, API, resources); separate flag, not a `--format` value |
 
 > **Command Reference**: See [Reports Guide - Generating Reports](reports.md#generating-reports) for format options and export commands.
 
@@ -166,7 +167,7 @@ jobs:
 
       - name: Run benchmark
         run: |
-          cow-perf run --scenario configs/scenarios/predefined/enhanced/regression-test.yml \
+          cow-perf run --config configs/scenarios/predefined/regression-test.yml \
             --save-baseline pr-${{ github.event.number }}
 
       - name: Compare with main
@@ -196,15 +197,17 @@ The report command returns exit codes for CI/CD pipelines:
 
 | Code | Meaning | Action |
 |------|---------|--------|
-| 0 | Success / No regressions | Continue pipeline |
-| 1 | Error (invalid arguments, missing files) | Fail pipeline - fix command |
-| 2 | Performance regression detected | Fail pipeline - investigate regression |
+| 0 | Report generated, verdict is SUCCESS or WARNING | Continue pipeline |
+| 1 | Error (invalid format argument, baseline not found) | Fail pipeline - fix command |
+| 2 | Report verdict is FAILURE (success rate <80%) | Fail pipeline - investigate |
+
+> **Note**: Exit code 2 reflects the **current run's own verdict**, not whether a regression was detected in a comparison. A comparison may show regressions but still exit 0 if the run itself passes the FAILURE thresholds.
 
 **Example CI check**:
 ```bash
 cow-perf report generate current --compare baseline
 if [ $? -eq 2 ]; then
-  echo "❌ Performance regression detected!"
+  echo "Test run verdict: FAILURE - investigate results"
   exit 1
 fi
 ```
@@ -260,7 +263,7 @@ Use descriptive names with context:
 **"Baseline not found"**
 - Check baseline name: `cow-perf baselines --list`
 - Verify correct baselines directory
-- Baselines stored in `~/.cow-perf/baselines/` by default
+- Baselines stored in `.cow-perf/baselines/` (project-local) by default
 
 **"No metrics available"**
 - Ensure test completed successfully
@@ -280,14 +283,14 @@ Use descriptive names with context:
 
 ### Debug Mode
 
-Enable verbose output for troubleshooting:
+The `report generate` command does not have a `--verbose` flag. To inspect the underlying data:
 
 ```bash
-# Verbose report generation
-cow-perf --verbose report generate my-baseline
-
-# Show raw baseline data
+# Show raw baseline data (JSON)
 cow-perf baselines --show my-baseline
+
+# Export full metrics as CSV for manual inspection
+cow-perf report generate my-baseline --export-csv
 ```
 
 ---
@@ -305,9 +308,10 @@ Statistical tests (t-test, p-value < 0.05) distinguish random fluctuations from 
 ### Cohen's d Effect Size
 
 Effect size measures practical significance:
-- **d < 0.2**: Negligible effect (ignore even if statistically significant)
-- **d = 0.5**: Medium effect (investigate)
-- **d > 0.8**: Large effect (requires action)
+- **d < 0.2**: Negligible (ignore even if statistically significant)
+- **0.2 ≤ d < 0.5**: Small effect (monitor)
+- **0.5 ≤ d < 0.8**: Medium effect (investigate)
+- **d ≥ 0.8**: Large effect (requires action)
 
 ### Why Percentiles, Not Averages
 
