@@ -1,0 +1,89 @@
+# Prometheus Configuration for CoW Performance Testing Suite
+# This file configures which services Prometheus scrapes for metrics
+
+global:
+  # How often to scrape targets for metrics
+  scrape_interval: 5s
+
+  # How often to evaluate alerting rules
+  evaluation_interval: 5s
+
+  # Labels to attach to all time series and alerts
+  external_labels:
+    monitor: 'cow-performance-test'
+    environment: 'test'
+
+# Scrape configurations for all services
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["prometheus:9090"]
+        labels:
+          service: "prometheus"
+
+  # CoW Protocol Orderbook API metrics
+  - job_name: "orderbook"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["orderbook:9586"]
+        labels:
+          service: "orderbook"
+          component: "cow-protocol"
+
+  # CoW Protocol Autopilot metrics
+  - job_name: "autopilot"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["autopilot:9589"]
+        labels:
+          service: "autopilot"
+          component: "cow-protocol"
+
+  # CoW Protocol Driver metrics
+  - job_name: "driver"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["driver:80"]
+        labels:
+          service: "driver"
+          component: "cow-protocol"
+
+  # Solver metrics (all baseline solvers)
+  - job_name: "solvers"
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - "solver-baseline-1:80"
+          - "solver-baseline-2:80"
+          - "solver-baseline-3:80"
+          - "solver-baseline-4:80"
+          - "solver-baseline-5:80"
+        labels:
+          component: "solver"
+          solver_type: "baseline"
+
+  # CoW Performance Test Suite metrics
+  # Scrapes the cow-perf container (when started with --profile with-cow-perf)
+  # and falls back to host.docker.internal for local (non-containerized) runs.
+  # Note: Only active during test runs with --prometheus-port flag
+  - job_name: "cow-performance-test"
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["cow-perf:9091"]
+        labels:
+          service: "performance-test"
+          component: "cow-perf"
+    # Fail gracefully if exporter not running
+    scrape_timeout: 5s
+
+# Alert rule files
+rule_files:
+  - "/etc/prometheus/alerts/*.yml"
+
+# Note: Alertmanager not configured - alerts visible in Prometheus UI and Grafana only
+# To enable Alertmanager notifications, uncomment below and add alertmanager service:
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ["alertmanager:9093"]

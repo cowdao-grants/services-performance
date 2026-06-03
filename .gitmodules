@@ -1,0 +1,6 @@
+[submodule "modules/services"]
+	path = modules/services
+	url = https://github.com/cowprotocol/services.git
+[submodule "modules/hooks-trampoline"]
+	path = modules/hooks-trampoline
+	url = https://github.com/cowprotocol/hooks-trampoline.git

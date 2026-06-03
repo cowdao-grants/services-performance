@@ -1,0 +1,66 @@
+# ============================================
+# MINIMAL PERFORMANCE TEST EXAMPLE
+# ============================================
+# This is the simplest possible configuration.
+# It runs a single trader submitting orders at a low rate for 1 minute.
+#
+# Use this example to:
+# - Verify your setup is working
+# - Understand the basic configuration structure
+# - Get your first performance test running quickly
+#
+# Expected outcome:
+# - ~30 orders submitted
+# - Success rate: >90%
+# - Duration: 1 minute
+# - Resource usage: Very low
+#
+# Run this example:
+#   cow-perf run --scenario examples/getting-started/01-minimal.yml
+
+name: "Minimal Example"
+description: "Simplest possible configuration for getting started"
+
+# Version and categorization
+version: "1.0"
+tags:
+  - example
+  - getting-started
+  - minimal
+
+# ============================================
+# TEST CONFIGURATION
+# ============================================
+
+# How many concurrent traders to simulate
+# Start with 1 to keep things simple
+num_traders: 1
+
+# How long to run the test (in seconds)
+# 60 seconds = 1 minute
+duration: 60
+
+# Delay between starting each trader (in seconds)
+# Not relevant with only 1 trader, but good to know about
+startup_interval: 0.1
+
+# ============================================
+# TRADING PATTERN
+# ============================================
+
+# How orders are submitted over time
+# Options: constant_rate, burst, random_interval
+trading_pattern: "constant_rate"
+
+# For constant_rate: orders per minute
+# 30 orders/minute = 1 order every 2 seconds
+base_rate: 30.0
+
+# ============================================
+# ORDER TYPE DISTRIBUTION
+# ============================================
+# These ratios must sum to 1.0
+# Using all market orders for simplicity
+
+market_order_ratio: 1.0  # 100% market orders (simplest)
+limit_order_ratio: 0.0

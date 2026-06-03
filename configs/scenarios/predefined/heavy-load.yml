@@ -1,0 +1,57 @@
+# CoW Performance Testing Suite Scenario
+# Heavy Load: High-intensity stress test pushing system limits
+
+# Scenario metadata
+name: "Heavy Load"
+description: "High-intensity stress test pushing system limits"
+tags: ["heavy", "stress", "performance"]
+
+# Test configuration
+num_traders: 25
+duration: 600  # 10 minutes
+
+# Wallet funding (required for real orderbook testing)
+# Increased balances to support larger order amounts (1-5 tokens per order)
+# With 25 traders and ~120 orders each, need sufficient balance per trader
+wallet:
+  funding_enabled: true
+  eth_balance: 10.0
+  token_balances:
+    WETH: 1000.0    # Increased to support multiple 1-5 WETH orders
+    DAI: 10000.0    # Increased proportionally
+    # USDC excluded: 6-decimal fee can exceed sell amounts at any gas price
+    # USDT excluded: non-standard approve() reverts on second settlement batch
+
+# Trading pattern: Constant rate (predictable, sustained load)
+trading_pattern: "constant_rate"
+base_rate: 120.0  # 120 orders per minute (2 orders/sec per trader)
+
+# Order type distribution (mostly market orders to avoid orderbook accumulation)
+# Limit orders accumulate in orderbook and hit per-trader limit (~100-120 orders)
+# Market orders have shorter validity (2 min) and clear faster
+market_order_ratio: 0.9   # Increased to reduce limit order accumulation
+limit_order_ratio: 0.1    # Reduced to avoid TooManyLimitOrders errors
+
+# Order amount configuration (optimized for profitability with 15% slippage)
+# Using same range as quick-test to ensure orders cover fees and provide solver profit
+# - WETH: 1-5 WETH = $3k-$15k (reasonable retail/small trader size)
+# - Stablecoins: 1000-5000 tokens = $1k-$5k (proportional to WETH value)
+min_order_amount: 1.0
+max_order_amount: 5.0
+
+# Aggressive rate limiting to prevent overload
+enable_global_rate_limit: true
+max_orders_global_per_second: 40.0  # Cap at 40 orders/sec
+rate_limit_burst_allowance: 1.2     # Small burst allowance
+
+enable_per_trader_rate_limit: true
+max_orders_per_trader_per_second: 2.5  # Cap per trader
+
+# Use case: Stress testing and capacity planning
+# - Find system breaking points
+# - Test under peak traffic (Black Friday, major launches)
+# - Validate rate limiting under pressure
+# - Database and API performance under load
+# - Resource utilization monitoring
+# - Expected: ~40 orders/sec sustained (rate limited)
+# - Without limits: ~50 orders/sec (25 traders × 2 orders/sec)

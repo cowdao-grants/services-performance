@@ -1,0 +1,44 @@
+# CoW Performance Testing Suite Scenario
+# Medium Load: Standard performance test simulating typical production traffic
+
+# Scenario metadata
+name: "Medium Load"
+description: "Standard performance test simulating typical production traffic"
+tags: ["medium", "production", "benchmark"]
+
+# Test configuration
+num_traders: 10
+duration: 300  # 5 minutes
+
+# Wallet funding (required for real orderbook testing)
+wallet:
+  funding_enabled: true
+  eth_balance: 10.0
+  token_balances:
+    WETH: 10.0
+    DAI: 10000.0
+    # USDC excluded: 6-decimal fee can exceed sell amounts at any gas price
+    # USDT excluded: non-standard approve() reverts on second settlement batch
+
+# Trading pattern: Poisson (realistic user behavior)
+trading_pattern: "poisson"
+base_rate: 60.0
+poisson_lambda: 60.0  # 60 orders per minute average
+
+# Order type distribution (realistic production mix)
+market_order_ratio: 0.5
+limit_order_ratio: 0.5
+
+# Conservative rate limiting
+enable_global_rate_limit: true
+max_orders_global_per_second: 15.0  # Allow up to 15 orders/sec
+rate_limit_burst_allowance: 1.5
+
+enable_per_trader_rate_limit: false
+
+# Use case: Standard performance benchmarking
+# - Production capacity planning
+# - Performance regression testing
+# - SLA validation
+# - Typical weekday traffic simulation
+# - Expected: ~10 orders/sec total (10 traders, λ=60/min each)

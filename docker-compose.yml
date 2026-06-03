@@ -1,0 +1,441 @@
+# CoW Protocol Performance Testing Suite - Fork Mode Environment
+# This docker-compose file sets up a complete testing environment with:
+# - Anvil node forking mainnet
+# - CoW Protocol services (Orderbook, Autopilot, Driver, Solver)
+# - Database and monitoring tools
+
+services:
+  # ===========================================================================
+  # Blockchain Node (Anvil Fork Mode)
+  # ===========================================================================
+  chain:
+    image: ghcr.io/foundry-rs/foundry:latest
+    restart: always
+    entrypoint: /entrypoint.sh
+    environment:
+      - ANVIL_IP_ADDR=0.0.0.0
+      - ETH_RPC_URL=${ETH_RPC_URL}
+      - ETH_BLOCKNUMBER=${ETH_BLOCKNUMBER:-}
+    volumes:
+      - ./docker/anvil-entrypoint.sh:/entrypoint.sh:ro
+    # Note: Anvil keeps state in process memory only (no disk persistence)
+    # Historical state is maintained to allow solvers to query recent block data
+    ports:
+      - "8545:8545"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    # Limit container logs to prevent disk accumulation
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      # Healthcheck that also patches the authenticator contract to allow any solver
+      test: ["CMD-SHELL", "
+          /usr/local/bin/cast block-number --rpc-url http://127.0.0.1:8545 > /dev/null 2>&1 &&
+          /usr/local/bin/cast rpc -r http://127.0.0.1:8545 anvil_setCode 0x2c4c28DDBdAc9C5E7055b4C863b72eA0149D8aFE 0x600160005260206000F3 > /dev/null 2>&1
+        "]
+      interval: 5s
+      timeout: 30s
+      retries: 5
+      start_period: 5s
+
+  # ===========================================================================
+  # Database
+  # ===========================================================================
+  db:
+    image: postgres:16
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_DB=postgres
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    command: postgres -c 'max_connections=200'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # ===========================================================================
+  # Database Migrations
+  # ===========================================================================
+  db-migrations:
+    build:
+      context: ./modules/services
+      target: migrations
+      dockerfile: ../../Dockerfile
+    restart: on-failure
+    environment:
+      - FLYWAY_URL=jdbc:postgresql://db:5432/postgres?user=${POSTGRES_USER:-postgres}&password=${POSTGRES_PASSWORD:-password}
+      - FLYWAY_LOCATIONS=filesystem:/flyway/sql
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ===========================================================================
+  # CoW Protocol Services
+  # ===========================================================================
+
+  # Orderbook API - Manages order submission and storage
+  orderbook:
+    build:
+      context: ./modules/services
+      target: localdev
+      dockerfile: ../../Dockerfile
+    restart: always
+    command: ["cargo", "watch", "-x", "run --bin orderbook"]
+    environment:
+      - NODE_URL=http://chain:8545
+      - DB_WRITE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/postgres
+      - DB_READ_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/postgres
+      - SIMULATION_NODE_URL=http://chain:8545
+      - ACCOUNT_BALANCES_SIMULATION=true
+      - ACCOUNT_BALANCES_SIMULATOR=Web3
+      - EIP1271_SKIP_CREATION_VALIDATION=true
+      - ENABLE_EIP1271_ORDERS=true
+      - PRICE_ESTIMATORS=None
+      - PRICE_ESTIMATION_DRIVERS=baseline|http://driver/baseline
+      - NATIVE_PRICE_ESTIMATORS=baseline|http://driver/baseline
+      - DRIVERS=baseline|http://driver/baseline
+      - BIND_ADDRESS=0.0.0.0:80
+      - CHAIN_ID=1
+      - SETTLEMENT_CONTRACT_ADDRESS=0x9008D19f58AAbD9eD0D60971565AA8510560ab41
+      - SETTLEMENT_CONTRACT_START_INDEX=24679094
+      - BASELINE_SOURCES=UniswapV2,SushiSwap,Swapr
+      - RUST_BACKTRACE=1
+      - RUST_LOG=orderbook=debug,shared=trace,shared::price_estimation=trace,shared::price_estimation::native=trace
+      - SKIP_EVENT_SYNC=true  # Skip historical mainnet events, only process new settlements
+      - SETTLE_INTERVAL=1s  # Reduced from 15s for faster settlement detection
+      - GAS_ESTIMATORS=Native,Web3
+      - TOKEN_OWNER_FINDERS=liquidity
+      - BLOCK_STREAM_POLL_INTERVAL=1s
+      - NATIVE_PRICE_CACHE_MAX_UPDATE_SIZE=100
+      - NATIVE_PRICE_CACHE_MAX_AGE=20m
+      - SOLVER_TIME_LIMIT=120
+      - RUN_LOOP_NATIVE_PRICE_TIMEOUT=120s
+      - NATIVE_PRICE_ESTIMATION_RESULTS_REQUIRED=1
+      - DISABLE_ORDER_FILTERING=true
+      - MAX_LIMIT_ORDERS_PER_USER=1000  # Increased from default 10 for performance testing
+    volumes:
+      - ./modules/services:/src
+      - orderbook_target:/src/target  # Named volume: persists across restarts, no duplicates
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      db-migrations:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+      chain:
+        condition: service_healthy
+    ports:
+      - "8080:80"      # API
+      - "9586:9586"    # Metrics
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80/api/v1/version || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  # Autopilot - Orchestrates solver auctions
+  autopilot:
+    build:
+      context: ./modules/services
+      target: autopilot
+    restart: always
+    command: ["--solve-deadline=5s"]
+    environment:
+      - NODE_URL=http://chain:8545
+      - DB_WRITE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/postgres
+      - DB_READ_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/postgres
+      - SIMULATION_NODE_URL=http://chain:8545
+      - SETTLEMENT_CONTRACT_ADDRESS=0x9008D19f58AAbD9eD0D60971565AA8510560ab41
+      - SETTLEMENT_CONTRACT_START_INDEX=24679094
+      - LOG_FILTER=warn,autopilot=info,shared=info
+      - DRIVERS=baseline|http://driver/baseline|0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266,baseline-2|http://driver/baseline-2|0x70997970C51812dc3A010C7d01b50e0d17dc79C8,baseline-3|http://driver/baseline-3|0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC,baseline-4|http://driver/baseline-4|0x90F79bf6EB2c4f870365E785982E1f101E93b906,baseline-5|http://driver/baseline-5|0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65
+      - PRICE_ESTIMATION_DRIVERS=baseline|http://driver/baseline
+      - NATIVE_PRICE_ESTIMATORS=baseline|http://driver/baseline
+      - SETTLE_INTERVAL=120s
+      - GAS_ESTIMATORS=web3
+      - BLOCK_STREAM_POLL_INTERVAL=1s
+      - NATIVE_PRICE_CACHE_MAX_UPDATE_SIZE=100
+      - NATIVE_PRICE_CACHE_MAX_AGE=20m
+      - SOLVER_TIME_LIMIT=120
+      - SUBMISSION_DEADLINE=5  # 5 blocks = ~50 seconds with 10s block time
+      - SKIP_EVENT_SYNC=true  # Skip historical mainnet events, only process new settlements
+      - BASELINE_SOURCES=UniswapV2
+      - RUST_BACKTRACE=1
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      db:
+        condition: service_healthy
+      orderbook:
+        condition: service_healthy
+      chain:
+        condition: service_healthy
+    ports:
+      - "9589:9589"    # Metrics
+
+  # Driver - Translates between autopilot and solvers
+  driver:
+    build:
+      context: ./modules/services
+      target: driver
+    restart: always
+    entrypoint: /entrypoint.sh
+    command: ["--config", "/driver.toml"]
+    environment:
+      - ETHRPC=http://chain:8545
+      - ADDR=0.0.0.0:80
+      - RUST_BACKTRACE=1
+      - RUST_LOG=driver=trace,solver=trace,shared=info
+      - GRAPH_API_KEY=${GRAPH_API_KEY:-}
+    volumes:
+      - ./configs/driver.toml:/driver.toml.template:ro
+      - ./docker/driver-entrypoint.sh:/entrypoint.sh:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      chain:
+        condition: service_healthy
+    ports:
+      - "9000:80"      # API & Metrics
+
+  # Baseline Solvers - Multiple instances for parallel solving
+  # Instance 1
+  solver-baseline-1:
+    build:
+      context: ./modules/services
+      target: solvers
+    restart: always
+    command: ["baseline", "--config", "/baseline.toml"]
+    environment:
+      - ADDR=0.0.0.0:80
+      - LOG=solvers=trace,shared=info
+      - RUST_BACKTRACE=1
+    volumes:
+      - ./configs/baseline.toml:/baseline.toml
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      chain:
+        condition: service_healthy
+    ports:
+      - "9001:80"      # API & Metrics
+
+  # Instance 2
+  solver-baseline-2:
+    build:
+      context: ./modules/services
+      target: solvers
+    restart: always
+    command: ["baseline", "--config", "/baseline.toml"]
+    environment:
+      - ADDR=0.0.0.0:80
+      - LOG=solvers=trace,shared=info
+      - RUST_BACKTRACE=1
+    volumes:
+      - ./configs/baseline.toml:/baseline.toml
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      chain:
+        condition: service_healthy
+    ports:
+      - "9002:80"
+
+  # Instance 3
+  solver-baseline-3:
+    build:
+      context: ./modules/services
+      target: solvers
+    restart: always
+    command: ["baseline", "--config", "/baseline.toml"]
+    environment:
+      - ADDR=0.0.0.0:80
+      - LOG=solvers=trace,shared=info
+      - RUST_BACKTRACE=1
+    volumes:
+      - ./configs/baseline.toml:/baseline.toml
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      chain:
+        condition: service_healthy
+    ports:
+      - "9003:80"
+
+  # Instance 4
+  solver-baseline-4:
+    build:
+      context: ./modules/services
+      target: solvers
+    restart: always
+    command: ["baseline", "--config", "/baseline.toml"]
+    environment:
+      - ADDR=0.0.0.0:80
+      - LOG=solvers=trace,shared=info
+      - RUST_BACKTRACE=1
+    volumes:
+      - ./configs/baseline.toml:/baseline.toml
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      chain:
+        condition: service_healthy
+    ports:
+      - "9004:80"
+
+  # Instance 5
+  solver-baseline-5:
+    build:
+      context: ./modules/services
+      target: solvers
+    restart: always
+    command: ["baseline", "--config", "/baseline.toml"]
+    environment:
+      - ADDR=0.0.0.0:80
+      - LOG=solvers=trace,shared=info
+      - RUST_BACKTRACE=1
+    volumes:
+      - ./configs/baseline.toml:/baseline.toml
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      chain:
+        condition: service_healthy
+    ports:
+      - "9005:80"
+
+  # ===========================================================================
+  # Monitoring (Optional)
+  # ===========================================================================
+
+  # Prometheus - Metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    restart: always
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--storage.tsdb.retention.size=1GB'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./configs/prometheus/alerts:/etc/prometheus/alerts:ro
+      - prometheus_data:/prometheus
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Grafana - Metrics visualization
+  grafana:
+    image: grafana/grafana:11.5.2
+    restart: always
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/dashboards/performance.json
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./configs/grafana-datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
+      - ./configs/grafana-dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard.yml:ro
+      - ./configs/dashboards:/etc/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      - prometheus
+
+  # ===========================================================================
+  # CoW Performance Test Runner (profile: with-cow-perf)
+  # ===========================================================================
+  # Start with:  docker compose --profile with-cow-perf up -d
+  # Run a test:  docker compose exec cow-perf cow-perf run \
+  #                --config configs/scenarios/predefined/light-load.yml
+  cow-perf:
+    profiles: ["with-cow-perf"]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    entrypoint: ["sleep", "infinity"]
+    environment:
+      - COW_NETWORK_RPC_URL=http://chain:8545
+      - COW_API_BASE_URL=http://orderbook
+    ports:
+      - "9091:9091"    # Prometheus metrics (exposed during test runs with --prometheus-port 9091)
+    volumes:
+      - ./configs:/app/configs:ro
+      - ./results:/app/results
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      chain:
+        condition: service_healthy
+      orderbook:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+  orderbook_target:  # Named volume for Rust build artifacts (prevents duplicates on restart)
+
+networks:
+  default:
+    name: cow-perf-test

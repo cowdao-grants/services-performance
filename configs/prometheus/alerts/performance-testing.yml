@@ -1,0 +1,184 @@
+# =============================================================================
+# CoW Performance Testing Suite - Prometheus Alert Rules
+# =============================================================================
+#
+# This file defines alerting rules for the CoW Performance Testing Suite.
+# Alerts are evaluated by Prometheus and can be viewed in the Prometheus UI
+# or visualized in Grafana dashboards.
+#
+# =============================================================================
+# ALERT PARAMETERS - Edit values here for easy customization
+# =============================================================================
+#
+# TODO(COW-617): Move these thresholds to configurable TOML/env variables
+#
+# LATENCY THRESHOLDS (seconds):
+#   submission_latency_warning_threshold: 5      # P95 > 5s triggers warning
+#   submission_latency_critical_threshold: 10    # P95 > 10s triggers critical
+#
+# ERROR RATE THRESHOLDS (decimal, where 0.05 = 5%):
+#   error_rate_critical_threshold: 0.05          # > 5% error rate
+#
+# THROUGHPUT THRESHOLDS (ratio, where 0.8 = 80%):
+#   throughput_low_threshold: 0.8                # < 80% of target rate
+#
+# RESOURCE THRESHOLDS (percentage):
+#   cpu_warning_threshold: 80                    # CPU > 80%
+#   memory_critical_threshold: 95                # Memory > 95%
+#
+# ALERT DURATIONS (prevents flapping):
+#   latency_warning_for: 2m
+#   latency_critical_for: 1m
+#   error_rate_for: 1m
+#   throughput_for: 2m
+#   cpu_for: 5m
+#   memory_for: 2m
+#   test_stalled_for: 1m
+#
+# =============================================================================
+
+groups:
+  - name: cow_performance_testing
+    # Evaluation interval inherited from global config (5s)
+    rules:
+      # =========================================================================
+      # LATENCY ALERTS
+      # =========================================================================
+
+      # High Submission Latency (Warning)
+      # Triggers when P95 submission latency exceeds warning threshold
+      - alert: HighSubmissionLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(cow_perf_submission_latency_seconds_bucket[1m])) by (le, scenario)
+          ) > 5
+        for: 2m
+        labels:
+          severity: warning
+          component: cow-performance-testing
+          category: latency
+        annotations:
+          summary: "High submission latency detected"
+          description: "P95 submission latency is {{ $value | printf \"%.2f\" }}s (threshold: 5s) for scenario {{ $labels.scenario }}"
+          runbook: "Check API logs, verify network connectivity, review recent code changes"
+
+      # Critical Submission Latency (Critical)
+      # Triggers when P95 submission latency exceeds critical threshold
+      - alert: CriticalSubmissionLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(cow_perf_submission_latency_seconds_bucket[1m])) by (le, scenario)
+          ) > 10
+        for: 1m
+        labels:
+          severity: critical
+          component: cow-performance-testing
+          category: latency
+        annotations:
+          summary: "Critical submission latency - immediate attention required"
+          description: "P95 submission latency is {{ $value | printf \"%.2f\" }}s (threshold: 10s) for scenario {{ $labels.scenario }}"
+          runbook: "Immediate action: Check API health, container resources, database connections"
+
+      # =========================================================================
+      # ERROR RATE ALERTS
+      # =========================================================================
+
+      # High Error Rate (Critical)
+      # Triggers when order failure rate exceeds threshold
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(cow_perf_orders_failed_total[5m])) by (scenario)
+            /
+            sum(rate(cow_perf_orders_submitted_total[5m])) by (scenario)
+          ) > 0.05
+        for: 1m
+        labels:
+          severity: critical
+          component: cow-performance-testing
+          category: errors
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%) for scenario {{ $labels.scenario }}"
+          runbook: "Check order validation errors, API error responses, contract state"
+
+      # =========================================================================
+      # THROUGHPUT ALERTS
+      # =========================================================================
+
+      # Low Throughput (Warning)
+      # Triggers when actual throughput falls below target
+      - alert: LowThroughput
+        expr: |
+          (
+            cow_perf_actual_rate
+            /
+            cow_perf_target_rate
+          ) < 0.8
+          and cow_perf_target_rate > 0
+        for: 2m
+        labels:
+          severity: warning
+          component: cow-performance-testing
+          category: throughput
+        annotations:
+          summary: "Low throughput - not meeting target rate"
+          description: "Actual throughput is {{ $value | humanizePercentage }} of target for scenario {{ $labels.scenario }}"
+          runbook: "Check for bottlenecks: API rate limits, network latency, resource constraints"
+
+      # =========================================================================
+      # TEST EXECUTION ALERTS
+      # =========================================================================
+
+      # Test Stalled (Critical)
+      # Triggers when no orders are being submitted during an active test
+      - alert: TestStalled
+        expr: |
+          rate(cow_perf_orders_submitted_total[1m]) == 0
+          and
+          cow_perf_test_progress_percent > 0
+          and
+          cow_perf_test_progress_percent < 100
+        for: 1m
+        labels:
+          severity: critical
+          component: cow-performance-testing
+          category: test-execution
+        annotations:
+          summary: "Performance test appears to be stalled"
+          description: "No orders submitted in the last minute for scenario {{ $labels.scenario }} (progress: {{ $value }}%)"
+          runbook: "Check test process, verify API connectivity, review error logs"
+
+      # =========================================================================
+      # RESOURCE ALERTS
+      # =========================================================================
+
+      # High CPU Usage (Warning)
+      # Triggers when container CPU usage is high
+      - alert: HighCPUUsage
+        expr: |
+          cow_perf_container_cpu_percent > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: cow-performance-testing
+          category: resources
+        annotations:
+          summary: "High CPU usage on {{ $labels.container }}"
+          description: "CPU usage is {{ $value | printf \"%.1f\" }}% (threshold: 80%) on container {{ $labels.container }}"
+          runbook: "Consider scaling resources, check for inefficient operations, review container limits"
+
+      # Critical Memory Usage (Critical)
+      # Triggers when container memory usage approaches limit
+      - alert: CriticalMemoryUsage
+        expr: |
+          cow_perf_container_memory_percent > 95
+        for: 2m
+        labels:
+          severity: critical
+          component: cow-performance-testing
+          category: resources
+        annotations:
+          summary: "Critical memory usage on {{ $labels.container }}"
+          description: "Memory usage is {{ $value | printf \"%.1f\" }}% (threshold: 95%) on container {{ $labels.container }}"
+          runbook: "Immediate action: Check for memory leaks, increase container memory limit, restart if necessary"

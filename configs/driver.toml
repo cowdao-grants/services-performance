@@ -1,0 +1,167 @@
+# CoW Protocol Driver Configuration
+# This file configures the driver service that translates between autopilot and solvers
+
+# Enable app-data fetching from IPFS
+app-data-fetching-enabled = true
+
+# Orderbook API URL
+orderbook-url = "http://orderbook"
+
+# Maximum gas limit for transactions
+tx-gas-limit = "45000000"
+
+# =============================================================================
+# Solver Configuration
+# =============================================================================
+
+[[solver]]
+name = "baseline"
+endpoint = "http://solver-baseline-1"
+absolute-slippage = "40000000000000000"  # 0.04 ETH
+relative-slippage = "0.1"
+# Anvil test account #0 (DO NOT USE IN PRODUCTION)
+account = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+
+[[solver]]
+name = "baseline-2"
+endpoint = "http://solver-baseline-2"
+absolute-slippage = "40000000000000000"
+relative-slippage = "0.1"
+# Anvil test account #1
+account = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+
+[[solver]]
+name = "baseline-3"
+endpoint = "http://solver-baseline-3"
+absolute-slippage = "40000000000000000"
+relative-slippage = "0.1"
+# Anvil test account #2
+account = "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"
+
+[[solver]]
+name = "baseline-4"
+endpoint = "http://solver-baseline-4"
+absolute-slippage = "40000000000000000"
+relative-slippage = "0.1"
+# Anvil test account #3
+account = "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6"
+
+[[solver]]
+name = "baseline-5"
+endpoint = "http://solver-baseline-5"
+absolute-slippage = "40000000000000000"
+relative-slippage = "0.1"
+# Anvil test account #4
+account = "0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926b"
+
+
+# =============================================================================
+# Transaction Submission Configuration
+# =============================================================================
+
+[submission]
+# Maximum gas price (in wei) for settlement transactions
+# This caps the maximum gas price to prevent excessive costs
+gas-price-cap = "1000000000000"  # 1000 Gwei
+
+# Configure which mempool to use for transaction submission
+[[submission.mempool]]
+mempool = "public"
+url = "http://chain:8545"
+
+# =============================================================================
+# Order Priority Configuration
+# =============================================================================
+
+[[order-priority]]
+strategy = "creation-timestamp"
+
+[[order-priority]]
+strategy = "external-price"
+
+[[order-priority]]
+strategy = "own-quotes"
+max-order-age = "10m"
+
+# =============================================================================
+# Smart Contract Addresses (Ethereum Mainnet)
+# =============================================================================
+
+[contracts]
+# GPv2Settlement contract address (deterministic deployment)
+gp-v2-settlement = "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"
+
+# WETH token address (wrapped native token on Ethereum mainnet)
+weth = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+
+# GPv2TradeSimulator contract for balance simulation (deterministic deployment)
+balances = "0x3e8C6De9510e7ECad902D005DE3Ab52f35cF4f1b"
+
+# Signature verification contract (deterministic deployment)
+signatures = "0x8262d639c38470F38d2eff15926F7071c28057Af"
+
+# =============================================================================
+# Liquidity Configuration
+# =============================================================================
+
+[liquidity]
+# Base tokens used for liquidity discovery and routing (Ethereum mainnet addresses)
+# These tokens are used as intermediaries for multi-hop swaps
+base-tokens = [
+    "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",  # WETH (Wrapped ETH)
+    "0x6B175474E89094C44Da98b954EedeAC495271d0F",  # DAI
+    "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",  # USDC
+    "0xdAC17F958D2ee523a2206206994597C13D831ec7",  # USDT
+    # NOTE: USDT has a non-standard approve() that reverts when setting non-zero if allowance != 0.
+    # The cow-perf scale command resets the settlement contract's USDT allowance before each step
+    # (see scale.py: _reset_usdt_allowance) to prevent settlement reverts across steps.
+    "0x6810e776880C02933D47DB1b9fc05908e5386b96",  # GNO
+]
+
+# =============================================================================
+# Uniswap V2 Liquidity Sources
+# =============================================================================
+
+# Uniswap V2 - Original AMM with constant product formula
+[[liquidity.uniswap-v2]]
+router = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
+pool-code = "0x96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f"
+missing-pool-cache-time = "1h"
+
+# SushiSwap - DISABLED FOR TESTING
+# [[liquidity.uniswap-v2]]
+# preset = "sushi-swap"
+
+# =============================================================================
+# Swapr Liquidity Source - DISABLED FOR TESTING
+# =============================================================================
+
+# Swapr - DISABLED FOR TESTING
+# [[liquidity.swapr]]
+# preset = "swapr"
+
+# =============================================================================
+# Uniswap V3 Liquidity Source - DISABLED FOR TESTING
+# =============================================================================
+
+# Uniswap V3 - DISABLED FOR TESTING
+# [[liquidity.uniswap-v3]]
+# preset = "uniswap-v3"
+# graph-url = "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3"
+# max-pools-to-initialize = 100
+# max-pools-per-tick-query = 1000
+# reinit-interval = "12h"
+
+# =============================================================================
+# Balancer V2 Liquidity Source
+# =============================================================================
+
+# Balancer V2 - Multi-token weighted pools with custom ratios
+# TEMPORARILY DISABLED FOR TESTING
+#[[liquidity.balancer-v2]]
+#preset = "balancer-v2"
+## Balancer V2 subgraph for Ethereum mainnet (The Graph decentralized network)
+## API key is substituted from GRAPH_API_KEY environment variable
+#graph-url = "https://gateway-arbitrum.network.thegraph.com/api/${GRAPH_API_KEY}/subgraphs/id/C4ayEZP2yTXRAB8vSaTrgN4m9anTe9Mdm2ViyiAuV9TV"
+## Reinitialize every 12 hours to discover new pools
+#reinit-interval = "12h"

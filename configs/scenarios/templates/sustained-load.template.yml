@@ -1,0 +1,64 @@
+# Sustained Load Test Template
+# Maintains constant load for an extended period to test system stability
+
+template_metadata:
+  name: sustained-load
+  description: Sustained constant load test for stability and endurance testing
+  parameters:
+    - name: test_name
+      type: string
+      required: false
+      default: "Sustained Load Test"
+      description: "Name of the test scenario"
+    - name: num_traders
+      type: int
+      required: true
+      description: "Number of concurrent traders generating load"
+    - name: duration
+      type: int
+      required: true
+      description: "Test duration in seconds"
+    - name: orders_per_minute
+      type: float
+      required: true
+      description: "Target order rate (orders per minute per trader)"
+    - name: env
+      type: string
+      required: false
+      default: "test"
+      description: "Environment tag"
+
+# Scenario configuration
+name: "${test_name:-Sustained Load Test}"
+description: "Sustained load with ${num_traders} traders at ${orders_per_minute} orders/min for ${duration}s"
+version: "1.0"
+
+tags:
+  - "${env:-test}"
+  - "sustained-load"
+  - "stability"
+
+# Trader configuration
+num_traders: ${num_traders}
+duration: ${duration}
+startup_interval: 0.1
+
+# Order type distribution
+market_order_ratio: 0.5
+limit_order_ratio: 0.5
+
+# Trading pattern - constant rate
+trading_pattern: "constant_rate"
+base_rate: ${orders_per_minute}
+
+# Metadata
+metadata:
+  expected_duration_seconds: ${duration}
+  resources:
+    min_memory_gb: 4
+    recommended_memory_gb: 8
+
+# Success criteria
+success_criteria:
+  min_success_rate: 0.95
+  max_error_rate: 0.05

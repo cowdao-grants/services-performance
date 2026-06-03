@@ -1,0 +1,40 @@
+# Sustained Load Scenario
+# Purpose: Test system stability over extended periods to detect memory leaks and degradation
+
+name: sustained-load
+description: Extended test for system stability and memory leak detection
+version: "1.0"
+
+tags:
+  - sustained
+  - stability
+  - long
+  - endurance
+
+metadata:
+  expected_orders: 18000
+  expected_duration_seconds: 1800  # 30 minutes
+  resources:
+    min_memory_gb: 4.0
+    min_cpu_cores: 4
+    recommended_memory_gb: 8.0
+    recommended_cpu_cores: 8
+
+success_criteria:
+  min_success_rate: 0.95
+  max_p95_latency_seconds: 10.0
+  max_error_rate: 0.05
+  min_throughput_per_second: 9.0
+
+# Test configuration
+num_traders: 25
+duration: 1800  # 30 minutes
+startup_interval: 0.1
+
+# Order type distribution - realistic mix
+market_order_ratio: 0.5
+limit_order_ratio: 0.5
+
+# Trading pattern - constant rate for stability testing
+trading_pattern: constant_rate
+base_rate: 600.0  # 10 orders/second total (25 traders * 0.4 orders/sec each)
